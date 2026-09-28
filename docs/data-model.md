@@ -1,7 +1,25 @@
 # Conti-Bingo — Data Model
 
-**Status:** Draft v0.3 (design only — not yet applied to the database) · **Last updated:** 2026-09-28
-**Supabase project:** `conti-bingo` (`oklzgorvsiyrlulsowij`, Postgres 17)
+**Status:** v1.0 — **APPLIED to the database** (2026-09-28) · **Supabase project:** `conti-bingo` (`oklzgorvsiyrlulsowij`, Postgres 17)
+
+> **Applied via migrations** `01`–`07` (see the project's migration history). Verified:
+> all 10 tables have RLS enabled; security advisors clean except the 4 intended RPC
+> endpoints; the win-detection trigger passed an end-to-end mark→bingo→unmark→revoke test.
+> TypeScript types are generated at `lib/supabase/database.types.ts`.
+>
+> **Implementation additions beyond the v0.3 design (kept in sync here):**
+> - **Denormalized leaderboard counters** on `player_cards` — `marks_count`, `points_total`,
+>   `bingo_count` — maintained by the mark/bingo triggers. This lets the `leaderboard` view
+>   respect RLS (group members read standings) **without** exposing other players' individual
+>   cells (which stay private).
+> - **`private` schema** holding the RLS helper functions `is_group_member/admin/owner`
+>   (SECURITY DEFINER, not exposed via the Data API — resolves the advisor warning).
+> - **Membership RPCs** (`create_group`, `join_group`, `accept_invite`, `get_invite_preview`)
+>   are SECURITY DEFINER functions that enforce role rules server-side; `group_members` has
+>   **no direct client INSERT** path (prevents role-escalation).
+> - **Notification triggers** implemented for `member_joined` and `bingo_achieved`; the
+>   remaining notification types are wired in the app layer later.
+> - Join code is currently 6 uppercase hex chars (from `gen_random_uuid`); can be refined.
 
 > Authentication (email + password, with **email confirmation** on sign-up; no 2FA) is
 > handled natively by Supabase Auth in the `auth` schema. Our application tables live in
