@@ -89,26 +89,25 @@ describe.skipIf(!hasServiceRole)('profile (integration)', () => {
     expect(after?.name).not.toBe('HACKED')
   })
 
-  it('enforces case-insensitive username uniqueness (daniel vs Daniel -> 23505)', async () => {
+  it('enforces username uniqueness (duplicate -> 23505)', async () => {
     const A = await createTestUser('User A3')
     const B = await createTestUser('User B3')
     createdUserIds.push(A.id, B.id)
 
-    // Unique base to avoid collisions with other test runs.
-    const base = `daniel${randomUUID().slice(0, 6)}`
-    const lower = base.toLowerCase()
-    const mixed = lower.charAt(0).toUpperCase() + lower.slice(1)
+    // Usernames are lowercase-only (CHECK ^[a-z0-9_]{3,20}$), so the unique
+    // index on lower(username) is exercised by a straight duplicate.
+    const username = `daniel${randomUUID().slice(0, 6)}`.toLowerCase()
 
     const { error: aErr } = await A.client
       .from('profiles')
-      .update({ username: lower })
+      .update({ username })
       .eq('id', A.id)
     expect(aErr).toBeNull()
 
-    // B tries the same username with different case -> must collide.
+    // B tries the same username -> unique violation.
     const { error: bErr } = await B.client
       .from('profiles')
-      .update({ username: mixed })
+      .update({ username })
       .eq('id', B.id)
     expect(bErr).not.toBeNull()
     expect(bErr?.code).toBe('23505')

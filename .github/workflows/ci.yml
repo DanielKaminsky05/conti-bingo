@@ -27,12 +27,10 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
-  # Non-blocking (for now): integration tests against an ephemeral local
-  # Supabase. These run for the first time here and are still being stabilized,
-  # so a failure is visible but does not fail the workflow.
+  # Integration tests against an ephemeral local Supabase (migrations applied
+  # by `supabase start`). No live project is involved.
   integration:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
