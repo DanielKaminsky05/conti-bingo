@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { CopyIcon, CheckIcon, Trash2Icon, MailIcon, LinkIcon } from "lucide-react"
 import { toast } from "sonner"
@@ -53,6 +53,10 @@ export function InvitePanel({
   const [expiryHours, setExpiryHours] = useState("")
   const [newLink, setNewLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // Locale/timezone date formatting differs server vs client — only format after
+  // mount to avoid a hydration mismatch.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   const pendingInvites = invites.filter((i) => i.status === "pending")
 
@@ -216,7 +220,11 @@ export function InvitePanel({
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {formatExpiry(invite.expires_at)}
+                    {mounted
+                      ? formatExpiry(invite.expires_at)
+                      : invite.expires_at
+                        ? "Expiring…"
+                        : "Never expires"}
                   </p>
                 </div>
                 <Button

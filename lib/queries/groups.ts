@@ -25,9 +25,16 @@ export async function getGroup(groupId: string): Promise<Group> {
 /** G3 — groups the current user owns or belongs to. */
 export async function listMyGroups(): Promise<Group[]> {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+  // Filter to OUR memberships — RLS lets a member see the whole roster, so
+  // without this filter the join returns one row per member of each group.
   const { data, error } = await supabase
     .from('group_members')
     .select('groups(*)')
+    .eq('user_id', user.id)
     .order('joined_at', { ascending: false })
   if (error) {
     throw new ActionError('error', error.message)

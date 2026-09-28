@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { CopyIcon, CheckIcon, RefreshCwIcon } from "lucide-react"
 import { toast } from "sonner"
@@ -20,10 +20,13 @@ export function ShareJoinCode({
   const [pending, startTransition] = useTransition()
   const [currentCode, setCurrentCode] = useState(code)
   const [copied, setCopied] = useState(false)
+  // Empty on the server AND first client render (avoids a hydration mismatch),
+  // then filled to the absolute origin after mount.
+  const [origin, setOrigin] = useState("")
+  useEffect(() => setOrigin(window.location.origin), [])
 
   const joinPath = `/join/${currentCode}`
-  const joinLink =
-    typeof window !== "undefined" ? `${window.location.origin}${joinPath}` : joinPath
+  const joinLink = origin ? `${origin}${joinPath}` : joinPath
 
   async function copy() {
     try {

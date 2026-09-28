@@ -18,8 +18,12 @@ export function subscribeToBingos(
   cardId: string,
   onChange: (payload: RealtimePostgresChangesPayload<Tables<'bingos'>>) => void
 ): RealtimeChannel {
+  // Unique channel name per subscriber: multiple components (grid + leaderboard)
+  // subscribe to the same card, and Supabase reuses channels by name — a shared
+  // name makes the 2nd `.on(...).subscribe()` throw "cannot add callbacks after
+  // subscribe()".
   return client
-    .channel(`bingos:card:${cardId}`)
+    .channel(`bingos:card:${cardId}:${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'bingos', filter: `card_id=eq.${cardId}` },
@@ -38,7 +42,7 @@ export function subscribeToPlayerCells(
   onChange: (payload: RealtimePostgresChangesPayload<Tables<'player_card_cells'>>) => void
 ): RealtimeChannel {
   return client
-    .channel(`player_card_cells:${playerCardId}`)
+    .channel(`player_card_cells:${playerCardId}:${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       {

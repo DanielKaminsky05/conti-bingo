@@ -157,30 +157,6 @@ export function BingoGrid({
 
   return (
     <div className="relative">
-      {/* Self-contained animations (globals.css is shared and not modified here). */}
-      <style>{`
-        @keyframes bingoPop {
-          0% { transform: scale(0.85); }
-          50% { transform: scale(1.08); }
-          100% { transform: scale(1); }
-        }
-        @keyframes bingoBurst {
-          0% { transform: scale(0.4); opacity: 0; }
-          30% { transform: scale(1.1); opacity: 1; }
-          100% { transform: scale(1.6); opacity: 0; }
-        }
-        @keyframes bingoGlow {
-          0%, 100% { box-shadow: 0 0 0 0 var(--gold); }
-          50% { box-shadow: 0 0 10px 1px var(--gold); }
-        }
-        .bingo-pop { animation: bingoPop 180ms ease-out; }
-        .bingo-burst { animation: bingoBurst 1100ms ease-out forwards; }
-        .bingo-line-glow { animation: bingoGlow 1400ms ease-in-out infinite; }
-        @media (prefers-reduced-motion: reduce) {
-          .bingo-pop, .bingo-burst, .bingo-line-glow { animation: none !important; }
-        }
-      `}</style>
-
       {burst && (
         <div
           aria-hidden
