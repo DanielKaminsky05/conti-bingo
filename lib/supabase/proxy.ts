@@ -42,14 +42,20 @@ export async function updateSession(request: NextRequest) {
 
   const user = data?.claims
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Public routes that don't require a session.
+  const path = request.nextUrl.pathname
+  const isPublic =
+    path.startsWith('/login') ||
+    path.startsWith('/signup') ||
+    path.startsWith('/confirm-email') ||
+    path.startsWith('/auth') ||
+    path.startsWith('/invite')
+
+  if (!user && !isPublic) {
+    // no user -> redirect to login, preserving where they were headed
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    if (path !== '/') url.searchParams.set('next', path)
     return NextResponse.redirect(url)
   }
 
