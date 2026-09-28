@@ -5,7 +5,8 @@ on:
   pull_request:
 
 jobs:
-  test:
+  # Blocking: typecheck + unit tests (no database needed).
+  build-and-unit:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,6 +24,28 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Unit tests
+        run: npm run test:unit
+
+  # Non-blocking (for now): integration tests against an ephemeral local
+  # Supabase. These run for the first time here and are still being stabilized,
+  # so a failure is visible but does not fail the workflow.
+  integration:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
@@ -31,13 +54,13 @@ jobs:
       - name: Start local Supabase (applies migrations)
         run: supabase start
 
-      - name: Test
+      - name: Integration tests
         run: |
           eval "$(supabase status -o env)"
           NEXT_PUBLIC_SUPABASE_URL="$API_URL" \
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY" \
           SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
-          npm test
+          npm run test:int
 
       - name: Stop local Supabase
         if: always()

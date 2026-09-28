@@ -10,7 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:unit": "vitest run lib",
+    "test:unit": "vitest run test/unit",
     "test:int": "vitest run test/integration"
   },
   "dependencies": {
