@@ -116,24 +116,19 @@ export async function updateCard(input: unknown): Promise<ActionResult<CardRow>>
     if (!current) throw new ActionError('not_found', 'Card not found or not editable.')
 
     // Structural changes (grid size / layout / free space) require rebuilding
-    // every player's cells — an across-players mutation blocked by RLS. Defer
-    // honestly rather than silently corrupting player cards.
-    // TODO(rpc): needs SECURITY DEFINER rebuild_player_cards(card_id).
+    // every player's cells — done via the `rebuild_player_cards` RPC below.
     const structuralChange =
       (fields.gridSize !== undefined && fields.gridSize !== current.grid_size) ||
       (fields.layoutMode !== undefined && fields.layoutMode !== current.layout_mode) ||
       (fields.freeSpace !== undefined && fields.freeSpace !== current.free_space)
-    if (structuralChange) {
-      throw new ActionError(
-        'error',
-        'Changing grid size, layout mode, or free space after a card is created is not yet supported — it requires a database function that rebuilds every player card. Create a new card instead.'
-      )
-    }
 
-    // Non-structural patch only.
+    // Apply the card-field patch (structural fields included).
     const patch: Database['public']['Tables']['cards']['Update'] = {}
     if (fields.title !== undefined) patch.title = fields.title
     if (fields.description !== undefined) patch.description = fields.description
+    if (fields.gridSize !== undefined) patch.grid_size = fields.gridSize
+    if (fields.layoutMode !== undefined) patch.layout_mode = fields.layoutMode
+    if (fields.freeSpace !== undefined) patch.free_space = fields.freeSpace
     if (fields.winCondition !== undefined) patch.win_condition = fields.winCondition
     if (fields.startsAt !== undefined) patch.starts_at = fields.startsAt
     if (fields.endsAt !== undefined) patch.ends_at = fields.endsAt
@@ -151,39 +146,58 @@ export async function updateCard(input: unknown): Promise<ActionResult<CardRow>>
       card = data
     }
 
-    // Edit challenge text/points IN PLACE (matched by sort_index) so the stable
-    // `challenges.id` — which every player's `player_card_cells.challenge_id`
-    // references — is preserved. Delete+reinsert would cascade-delete players'
-    // cells and wipe their marks, so it is intentionally avoided.
+    let needsRebuild = structuralChange
+
     if (challenges !== undefined) {
       const { data: existing, error: exErr } = await supabase
         .from('challenges')
-        .select('id, sort_index')
+        .select('id, sort_index, text')
         .eq('card_id', cardId)
         .order('sort_index', { ascending: true })
       if (exErr) throw new ActionError('error', exErr.message)
 
-      // Adding/removing challenges changes the grid and needs a player-card
-      // rebuild — deferred, same as structural changes above.
-      // TODO(rpc): needs SECURITY DEFINER rebuild_player_cards(card_id).
-      if (!existing || existing.length !== challenges.length) {
-        throw new ActionError(
-          'error',
-          'Adding or removing challenges after a card is created is not yet supported (it requires rebuilding every player card). Editing existing challenge text/points is fine.'
-        )
-      }
+      const countChanged = !existing || existing.length !== challenges.length
 
-      for (let i = 0; i < existing.length; i++) {
-        const { error: upErr } = await supabase
-          .from('challenges')
-          .update({ text: challenges[i].text, points: challenges[i].points })
-          .eq('id', existing[i].id)
-        if (upErr) throw new ActionError('error', upErr.message)
+      if (structuralChange || countChanged) {
+        // Structural change or a different challenge count: replace the challenge
+        // set and rebuild every player card (marks reset — D5 structural path).
+        const { error: delErr } = await supabase.from('challenges').delete().eq('card_id', cardId)
+        if (delErr) throw new ActionError('error', delErr.message)
+        const rows: TablesInsert<'challenges'>[] = challenges.map((c, index) => ({
+          card_id: cardId,
+          text: c.text,
+          points: c.points,
+          sort_index: index,
+        }))
+        const { error: insErr } = await supabase.from('challenges').insert(rows)
+        if (insErr) throw new ActionError('error', insErr.message)
+        needsRebuild = true
+      } else {
+        // Same challenge set: edit text/points IN PLACE so the stable
+        // `challenges.id` (referenced by every player's cells) is preserved.
+        const changedTextIds: string[] = []
+        for (let i = 0; i < existing.length; i++) {
+          const { error: upErr } = await supabase
+            .from('challenges')
+            .update({ text: challenges[i].text, points: challenges[i].points })
+            .eq('id', existing[i].id)
+          if (upErr) throw new ActionError('error', upErr.message)
+          if (existing[i].text !== challenges[i].text) changedTextIds.push(existing[i].id)
+        }
+        // Un-mark each edited square across all players (revokes dependent
+        // bingos via the trigger), then recompute points for still-marked cells.
+        for (const id of changedTextIds) {
+          const { error: rErr } = await supabase.rpc('reset_edited_challenge', { p_challenge_id: id })
+          if (rErr) throw new ActionError('error', rErr.message)
+        }
+        const { error: rcErr } = await supabase.rpc('recount_card', { p_card_id: cardId })
+        if (rcErr) throw new ActionError('error', rcErr.message)
       }
-      // NOTE: editing a challenge's text should also un-mark that square on every
-      // player's card and revoke dependent bingos (D5). That is an across-players
-      // mutation blocked by RLS.
-      // TODO(rpc): needs SECURITY DEFINER reset_edited_challenge(challenge_id).
+    }
+
+    if (needsRebuild) {
+      const { error: rbErr } = await supabase.rpc('rebuild_player_cards', { p_card_id: cardId })
+      if (rbErr) throw new ActionError('error', rbErr.message)
     }
 
     revalidatePath(`/groups/${card.group_id}`)
@@ -192,48 +206,19 @@ export async function updateCard(input: unknown): Promise<ActionResult<CardRow>>
 }
 
 /**
- * Archive the group's active card (if any) then activate `cardId`.
- *
- * NON-ATOMIC: the archive and the activate are two separate statements. Between
- * them there is briefly no active card; if the second write fails the group can
- * be left with no active card. We rely on the `one_active_card_per_group`
- * partial unique to prevent two active cards. Owner/admin only via RLS.
- *
- * // TODO(rpc): atomic publish_card — do the archive-current + activate-new in a
- * // single SECURITY DEFINER transaction.
+ * Archive the group's active card (if any) then activate `cardId`, atomically,
+ * via the `publish_card` SECURITY DEFINER RPC.
  */
 async function activateCard(supabase: Supabase, cardId: string): Promise<CardRow> {
-  // Resolve the card's group so we can archive that group's current active card.
-  const { data: target, error: loadError } = await supabase
-    .from('cards')
-    .select('id, group_id')
-    .eq('id', cardId)
-    .single()
-  if (loadError) throw new ActionError('error', loadError.message)
-  if (!target) throw new ActionError('not_found', 'Card not found.')
-
-  const { error: archiveError } = await supabase
-    .from('cards')
-    .update({ status: 'archived' })
-    .eq('group_id', target.group_id)
-    .eq('status', 'active')
-  if (archiveError) throw new ActionError('error', archiveError.message)
-
-  const { data: activated, error: activateError } = await supabase
-    .from('cards')
-    .update({ status: 'active' })
-    .eq('id', cardId)
-    .select('*')
-    .single()
-  if (activateError) throw new ActionError('error', activateError.message)
-  if (!activated) throw new ActionError('not_found', 'Card not found or not publishable.')
-
-  return activated
+  const { data, error } = await supabase.rpc('publish_card', { p_card_id: cardId })
+  if (error) throw new ActionError('error', error.message)
+  if (!data) throw new ActionError('not_found', 'Card not found or not publishable.')
+  return data as CardRow
 }
 
 /**
- * C7 — publish a draft: archive the group's current active card, then set this
- * card active. See `activateCard` for the non-atomicity caveat + deferred RPC.
+ * C7 — publish a draft: atomically archive the group's current active card and
+ * set this card active (via the `publish_card` RPC).
  */
 export async function publishCard(input: unknown): Promise<ActionResult<CardRow>> {
   return withResult(async () => {

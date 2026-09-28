@@ -11,11 +11,13 @@ import {
   archiveGroupSchema,
   updateMemberRoleSchema,
   removeMemberSchema,
+  transferOwnershipSchema,
   type CreateGroupInput,
   type UpdateGroupInput,
   type ArchiveGroupInput,
   type UpdateMemberRoleInput,
   type RemoveMemberInput,
+  type TransferOwnershipInput,
 } from '@/lib/validation/groups'
 import type { Tables } from '@/lib/supabase/database.types'
 
@@ -269,6 +271,26 @@ export async function updateMemberRole(input: UpdateMemberRoleInput): Promise<Ac
 
   revalidatePath(`/groups/${groupId}`)
   return ok({ groupId, userId, role })
+}
+
+/** Transfer ownership to another member (owner-only), atomically via RPC. */
+export async function transferOwnership(input: TransferOwnershipInput): Promise<ActionResult<{ groupId: string; newOwnerId: string }>> {
+  return withResult(async () => {
+    const { supabase } = await requireUser()
+    const parsed = transferOwnershipSchema.safeParse(input)
+    if (!parsed.success) {
+      throw new ActionError('validation', parsed.error.issues[0]?.message ?? 'Invalid input.')
+    }
+    const { groupId, newOwnerId } = parsed.data
+    const { error } = await supabase.rpc('transfer_ownership', {
+      p_group_id: groupId,
+      p_new_owner: newOwnerId,
+    })
+    if (error) throw new ActionError('error', error.message)
+
+    revalidatePath(`/groups/${groupId}`)
+    return { groupId, newOwnerId }
+  })
 }
 
 /** G13 — upload/replace the group image (RLS: owner/admin) and store its path. */

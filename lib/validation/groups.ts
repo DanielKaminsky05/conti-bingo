@@ -52,3 +52,10 @@ export const removeMemberSchema = z.object({
   userId: z.string().uuid(),
 })
 export type RemoveMemberInput = z.infer<typeof removeMemberSchema>
+
+/** transferOwnership — current owner hands ownership to another member. */
+export const transferOwnershipSchema = z.object({
+  groupId: z.string().uuid(),
+  newOwnerId: z.string().uuid(),
+})
+export type TransferOwnershipInput = z.infer<typeof transferOwnershipSchema>

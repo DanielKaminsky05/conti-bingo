@@ -423,8 +423,10 @@ Applied to **every** Action/Route (in addition to the specifics above):
   (C1/C3/C7/C8), and weighted points (L1). Activity feed + reactions deferred. **(D7)**
 
 ## 6. Still Open (endpoint contracts)
-- **Ownership transfer** endpoint (owner → another member) — needed before an owner can
-  leave (G7). Mechanics TBD (updates `host_id` + `owner` role atomically).
+- ~~**Ownership transfer** endpoint~~ — **DONE**: `transferOwnership` action → `transfer_ownership`
+  RPC (atomic `host_id` + `owner` role swap). Owners transfer before leaving (G7).
+- ~~Atomic publish, per-square edit reset, structural rebuild~~ — **DONE** via the migration-08
+  RPCs (`publish_card`, `reset_edited_challenge`/`recount_card`, `rebuild_player_cards`).
 - **Email-scoped invites** — whether V5 enforces that the accepting user's email matches the
   invite's `email`, or the token alone suffices.
 - **Scheduled activation** — whether a card with a future `starts_at` auto-activates (needs a

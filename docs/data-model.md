@@ -2,7 +2,10 @@
 
 **Status:** v1.0 — **APPLIED to the database** (2026-09-28) · **Supabase project:** `conti-bingo` (`oklzgorvsiyrlulsowij`, Postgres 17)
 
-> **Applied via migrations** `01`–`07` (see the project's migration history). Verified:
+> **Applied via migrations** `01`–`08` (see the project's migration history). Migration `08`
+> adds the `SECURITY DEFINER` RPCs `publish_card` (atomic publish), `rebuild_player_cards`
+> (structural edits), `reset_edited_challenge` (D5 per-square reset), `recount_card`, and
+> `transfer_ownership` — all auth+role checked internally and smoke-tested end-to-end. Verified:
 > all 10 tables have RLS enabled; security advisors clean except the 4 intended RPC
 > endpoints; the win-detection trigger passed an end-to-end mark→bingo→unmark→revoke test.
 > TypeScript types are generated at `lib/supabase/database.types.ts`.

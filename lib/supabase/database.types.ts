@@ -594,6 +594,32 @@ export type Database = {
           updated_at: string
         }
       }
+      publish_card: {
+        Args: { p_card_id: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          ends_at: string | null
+          free_space: boolean
+          grid_size: number
+          group_id: string
+          id: string
+          layout_mode: Database["public"]["Enums"]["card_layout_mode"]
+          starts_at: string | null
+          status: Database["public"]["Enums"]["card_status"]
+          title: string
+          updated_at: string
+          win_condition: Database["public"]["Enums"]["card_win_condition"]
+        }
+      }
+      rebuild_player_cards: { Args: { p_card_id: string }; Returns: undefined }
+      recount_card: { Args: { p_card_id: string }; Returns: undefined }
+      reset_edited_challenge: { Args: { p_challenge_id: string }; Returns: undefined }
+      transfer_ownership: {
+        Args: { p_group_id: string; p_new_owner: string }
+        Returns: undefined
+      }
     }
     Enums: {
       bingo_type: "line" | "blackout"
