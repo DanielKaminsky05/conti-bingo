@@ -23,12 +23,22 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase (applies migrations)
+        run: supabase start
+
       - name: Test
-        run: npm test
-        env:
-          # Unit tests need none of these. If these repo secrets are set, the
-          # integration suites run against the live project; otherwise they skip
-          # cleanly (hasServiceRole === false).
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          eval "$(supabase status -o env)"
+          NEXT_PUBLIC_SUPABASE_URL="$API_URL" \
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY" \
+          SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+          npm test
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop
