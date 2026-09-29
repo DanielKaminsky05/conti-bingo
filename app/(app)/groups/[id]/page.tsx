@@ -73,6 +73,7 @@ export default async function GroupPlayPage({
               id: card.id,
               grid_size: card.grid_size,
               free_space: card.free_space,
+              free_space_image_path: card.free_space_image_path,
               challenges,
             }}
             currentUserId={user?.id ?? null}
@@ -104,6 +105,7 @@ export default async function GroupPlayPage({
             id: card.id,
             grid_size: card.grid_size,
             free_space: card.free_space,
+            free_space_image_path: card.free_space_image_path,
             layout_mode: card.layout_mode,
             challenges,
           }}

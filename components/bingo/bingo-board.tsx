@@ -17,6 +17,7 @@ export type BingoBoardCard = {
   id: string
   grid_size: number
   free_space: boolean
+  free_space_image_path?: string | null
   layout_mode: string
   challenges: Challenge[]
 }
@@ -150,6 +151,7 @@ export function BingoBoard({
         cardId={card.id}
         gridSize={card.grid_size}
         freeSpacePosition={freePos}
+        freeSpaceImagePath={card.free_space_image_path}
         cells={cells}
         onMarkedCountChange={setMarkedCount}
         view={view}

@@ -10,7 +10,7 @@ import { freeSpacePosition } from "@/lib/bingo/layout"
 import { publicStorageUrl } from "@/lib/storage-url"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { TileMedia } from "@/components/bingo/tile-media"
+import { TileMedia, FreeSpaceContent } from "@/components/bingo/tile-media"
 import { cn } from "@/lib/utils"
 
 type Challenge = { id: string; text: string | null; imagePath?: string | null }
@@ -19,6 +19,7 @@ export type CoopBoardCard = {
   id: string
   grid_size: number
   free_space: boolean
+  free_space_image_path?: string | null
   challenges: Challenge[]
 }
 
@@ -256,9 +257,7 @@ export function CoopBoard({
               {!isFree && <TileMedia imagePath={cell.imagePath} hasText={!!cell.text} />}
 
               {isFree ? (
-                <span className="text-lg" aria-hidden>
-                  ★
-                </span>
+                <FreeSpaceContent imagePath={card.free_space_image_path} />
               ) : (
                 cell.text && (
                   <span

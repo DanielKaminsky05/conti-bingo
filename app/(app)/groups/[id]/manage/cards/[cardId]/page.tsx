@@ -36,6 +36,7 @@ export default async function ManageCardEditPage({
     gridSize: card.grid_size,
     layoutMode: card.layout_mode,
     freeSpace: card.free_space,
+    freeSpaceImagePath: card.free_space_image_path,
     winCondition: card.win_condition,
     gameMode: card.game_mode,
     startsAt: card.starts_at,

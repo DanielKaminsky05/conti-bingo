@@ -73,6 +73,7 @@ export type Database = {
           description: string | null
           ends_at: string | null
           free_space: boolean
+          free_space_image_path: string | null
           game_mode: Database["public"]["Enums"]["card_game_mode"]
           grid_size: number
           group_id: string
@@ -90,6 +91,7 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           free_space?: boolean
+          free_space_image_path?: string | null
           game_mode?: Database["public"]["Enums"]["card_game_mode"]
           grid_size?: number
           group_id: string
@@ -107,6 +109,7 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           free_space?: boolean
+          free_space_image_path?: string | null
           game_mode?: Database["public"]["Enums"]["card_game_mode"]
           grid_size?: number
           group_id?: string
@@ -702,6 +705,7 @@ export type Database = {
           description: string | null
           ends_at: string | null
           free_space: boolean
+          free_space_image_path: string | null
           game_mode: Database["public"]["Enums"]["card_game_mode"]
           grid_size: number
           group_id: string

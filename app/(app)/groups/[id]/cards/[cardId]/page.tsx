@@ -133,6 +133,7 @@ export default async function CardDetailPage({
         }))}
         gridSize={card.grid_size}
         freeSpace={card.free_space}
+        freeSpaceImagePath={card.free_space_image_path}
       />
     </div>
   )

@@ -45,6 +45,7 @@ async function insertDraftCard(
       grid_size: input.gridSize,
       layout_mode: coop ? 'identical' : input.layoutMode,
       free_space: input.freeSpace,
+      free_space_image_path: input.freeSpace ? input.freeSpaceImagePath ?? null : null,
       win_condition: coop ? 'blackout' : input.winCondition,
       game_mode: input.gameMode,
       starts_at: input.startsAt ?? null,
@@ -148,6 +149,7 @@ export async function updateCard(input: unknown): Promise<ActionResult<CardRow>>
     // Co-op forces identical layout + blackout win (single shared board).
     if (fields.layoutMode !== undefined) patch.layout_mode = coop ? 'identical' : fields.layoutMode
     if (fields.freeSpace !== undefined) patch.free_space = fields.freeSpace
+    if (fields.freeSpaceImagePath !== undefined) patch.free_space_image_path = fields.freeSpaceImagePath
     if (fields.winCondition !== undefined) patch.win_condition = coop ? 'blackout' : fields.winCondition
     if (fields.startsAt !== undefined) patch.starts_at = fields.startsAt
     if (fields.endsAt !== undefined) patch.ends_at = fields.endsAt

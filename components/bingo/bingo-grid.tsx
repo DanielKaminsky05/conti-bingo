@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { TileMedia } from "@/components/bingo/tile-media"
+import { TileMedia, FreeSpaceContent } from "@/components/bingo/tile-media"
 import { cn } from "@/lib/utils"
 
 export type GridCell = {
@@ -53,6 +53,7 @@ export function BingoGrid({
   cardId,
   gridSize,
   freeSpacePosition,
+  freeSpaceImagePath,
   cells: initialCells,
   onMarkedCountChange,
   view = "grid",
@@ -62,6 +63,7 @@ export function BingoGrid({
   cardId: string
   gridSize: number
   freeSpacePosition: number | null
+  freeSpaceImagePath?: string | null
   cells: GridCell[]
   onMarkedCountChange?: (count: number) => void
   view?: ViewMode
@@ -271,9 +273,7 @@ export function BingoGrid({
               {!isFree && <TileMedia imagePath={cell.imagePath} hasText={!!cell.text} />}
 
               {isFree ? (
-                <span className="text-lg" aria-hidden>
-                  ★
-                </span>
+                <FreeSpaceContent imagePath={freeSpaceImagePath} />
               ) : (
                 cell.text && (
                   <span

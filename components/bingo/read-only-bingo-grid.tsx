@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { CheckIcon } from "lucide-react"
 import { completedLines, linesFor } from "@/lib/bingo/winlines"
-import { TileMedia } from "@/components/bingo/tile-media"
+import { TileMedia, FreeSpaceContent } from "@/components/bingo/tile-media"
 import { cn } from "@/lib/utils"
 import type { GridCell } from "@/components/bingo/bingo-grid"
 
@@ -32,10 +32,12 @@ const GRID_COLS: Record<number, string> = {
 export function ReadOnlyBingoGrid({
   gridSize,
   freeSpacePosition,
+  freeSpaceImagePath,
   cells,
 }: {
   gridSize: number
   freeSpacePosition: number | null
+  freeSpaceImagePath?: string | null
   cells: GridCell[]
 }) {
   const markedSet = useMemo(
@@ -58,7 +60,7 @@ export function ReadOnlyBingoGrid({
             key={cell.position}
             aria-label={isFree ? "Free space" : cell.text ?? "Challenge"}
             className={cn(
-              "relative flex aspect-square min-h-[44px] items-center justify-center rounded-xl p-1.5 text-center text-[11px] font-bold leading-tight break-words hyphens-auto sm:text-xs",
+              "relative flex aspect-square min-h-[44px] items-center justify-center overflow-hidden rounded-xl p-1.5 text-center text-[11px] font-bold leading-tight break-words hyphens-auto sm:text-xs",
               isFree
                 ? "bg-free text-free-foreground"
                 : cell.isMarked
@@ -70,9 +72,7 @@ export function ReadOnlyBingoGrid({
             {!isFree && <TileMedia imagePath={cell.imagePath} hasText={!!cell.text} />}
 
             {isFree ? (
-              <span className="text-lg" aria-hidden>
-                ★
-              </span>
+              <FreeSpaceContent imagePath={freeSpaceImagePath} />
             ) : (
               cell.text && (
                 <span

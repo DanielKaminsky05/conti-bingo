@@ -3,7 +3,7 @@
 import { freeSpacePosition } from "@/lib/bingo/layout"
 import { Badge } from "@/components/ui/badge"
 import { ViewToggle, useViewMode } from "@/components/common/view-toggle"
-import { TileMedia } from "@/components/bingo/tile-media"
+import { TileMedia, FreeSpaceContent } from "@/components/bingo/tile-media"
 import { cn } from "@/lib/utils"
 
 export type CardChallenge = {
@@ -28,10 +28,12 @@ export function CardChallengesView({
   challenges,
   gridSize,
   freeSpace,
+  freeSpaceImagePath,
 }: {
   challenges: CardChallenge[]
   gridSize: number
   freeSpace: boolean
+  freeSpaceImagePath?: string | null
 }) {
   const [mode, setMode] = useViewMode("card-challenges-view", "grid")
 
@@ -62,9 +64,9 @@ export function CardChallengesView({
                 <div
                   key={tile.pos}
                   aria-label="Free space"
-                  className="flex aspect-square items-center justify-center rounded-xl bg-free text-free-foreground text-lg"
+                  className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-free text-free-foreground text-lg"
                 >
-                  ★
+                  <FreeSpaceContent imagePath={freeSpaceImagePath} />
                 </div>
               )
             }

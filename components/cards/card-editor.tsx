@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubmitButton } from "@/components/common/submit-button"
 import { ViewToggle, useViewMode } from "@/components/common/view-toggle"
-import { TileMedia } from "@/components/bingo/tile-media"
+import { TileMedia, FreeSpaceContent } from "@/components/bingo/tile-media"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
@@ -44,6 +44,7 @@ export type CardEditorInitial = {
   gridSize: number
   layoutMode: LayoutMode
   freeSpace: boolean
+  freeSpaceImagePath: string | null
   winCondition: WinCondition
   gameMode: GameMode
   startsAt: string | null
@@ -111,6 +112,9 @@ export function CardEditor({
   const [gridSize, setGridSize] = useState<GridSize>((initial?.gridSize as GridSize) ?? 5)
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(initial?.layoutMode ?? "shuffled")
   const [freeSpace, setFreeSpace] = useState<boolean>(initial?.freeSpace ?? false)
+  const [freeSpaceImagePath, setFreeSpaceImagePath] = useState<string | undefined>(
+    initial?.freeSpaceImagePath ?? undefined
+  )
   const [winCondition, setWinCondition] = useState<WinCondition>(initial?.winCondition ?? "line")
   const [gameMode, setGameMode] = useState<GameMode>(initial?.gameMode ?? "individual")
   const coop = gameMode === "coop"
@@ -156,15 +160,16 @@ export function CardEditor({
     setChallenges((prev) => prev.map((c, i) => (i === index ? { ...c, ...patch } : c)))
   }
 
-  async function onPickTileImage(index: number, file: File | null) {
-    if (!file) return
+  /** Upload an image to the group-images bucket; returns the stored path or null. */
+  async function uploadImage(file: File | null): Promise<string | null> {
+    if (!file) return null
     if (!file.type.startsWith("image/")) {
       toast.error("File must be an image.")
-      return
+      return null
     }
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Image must be 5 MB or smaller.")
-      return
+      return null
     }
     setUploading(true)
     const fd = new FormData()
@@ -174,10 +179,23 @@ export function CardEditor({
     setUploading(false)
     if (!res.ok) {
       toast.error(res.error)
-      return
+      return null
     }
-    updateChallenge(index, { imagePath: res.data.path })
+    return res.data.path
+  }
+
+  async function onPickTileImage(index: number, file: File | null) {
+    const path = await uploadImage(file)
+    if (!path) return
+    updateChallenge(index, { imagePath: path })
     toast.success("Image added.")
+  }
+
+  async function onPickFreeSpaceImage(file: File | null) {
+    const path = await uploadImage(file)
+    if (!path) return
+    setFreeSpaceImagePath(path)
+    toast.success("Free-space image added.")
   }
 
   type PayloadChallenge = { text?: string; points: number; imagePath?: string }
@@ -233,6 +251,8 @@ export function CardEditor({
       // Co-op is always an identical layout won by blackout (single shared board).
       layoutMode: coop ? ("identical" as LayoutMode) : layoutMode,
       freeSpace: effectiveFreeSpace,
+      // Clear any stored image when there's no free space.
+      freeSpaceImagePath: effectiveFreeSpace ? freeSpaceImagePath ?? null : null,
       winCondition: coop ? ("blackout" as WinCondition) : winCondition,
       gameMode,
       startsAt: localInputToIso(startsAt),
@@ -408,6 +428,41 @@ export function CardEditor({
             onChange={(e) => setFreeSpace(e.target.checked)}
           />
         </div>
+
+        {/* Optional image for the center free tile. */}
+        {effectiveFreeSpace && (
+          <div className="space-y-2 rounded-xl border border-border bg-card px-4 py-3">
+            <Label>Free-space image (optional)</Label>
+            {freeSpaceImagePath ? (
+              <div className="flex items-center gap-3">
+                <span className="relative size-16 shrink-0 overflow-hidden rounded-lg border border-tile-border">
+                  <TileMedia imagePath={freeSpaceImagePath} hasText={false} />
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploading}
+                  onClick={() => setFreeSpaceImagePath(undefined)}
+                >
+                  <Trash2Icon />
+                  Remove image
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <ImageIcon className="size-5 shrink-0 text-muted-foreground" />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  disabled={uploading}
+                  onChange={(e) => onPickFreeSpaceImage(e.target.files?.[0] ?? null)}
+                />
+              </div>
+            )}
+            {uploading && <p className="text-xs text-muted-foreground">Uploading image…</p>}
+          </div>
+        )}
       </div>
 
       {/* Win condition — n/a for co-op (always blackout). */}
@@ -478,10 +533,10 @@ export function CardEditor({
                 return (
                   <div
                     key={tile.pos}
-                    className="flex aspect-square items-center justify-center rounded-xl bg-free text-free-foreground text-lg"
+                    className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-free text-free-foreground text-lg"
                     aria-label="Free space"
                   >
-                    ★
+                    <FreeSpaceContent imagePath={freeSpaceImagePath} />
                   </div>
                 )
               }

@@ -31,6 +31,7 @@ export type ViewableCard = {
   id: string
   gridSize: number
   freeSpace: boolean
+  freeSpaceImagePath?: string | null
   challenges: { id: string; text: string | null; imagePath?: string | null }[]
 }
 
@@ -192,6 +193,7 @@ export function PlayerCardDialog({
                 <ReadOnlyBingoGrid
                   gridSize={card.gridSize}
                   freeSpacePosition={freePos}
+                  freeSpaceImagePath={card.freeSpaceImagePath}
                   cells={state.cells}
                 />
               ) : (
