@@ -119,7 +119,7 @@ export function PlayerCardDialog({
 
   return (
     <Dialog open={player !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
         {player && (
           <>
             <DialogHeader>
@@ -187,7 +187,7 @@ export function PlayerCardDialog({
                   cells={state.cells}
                 />
               ) : (
-                <ul className="max-h-[60vh] space-y-1.5 overflow-y-auto">
+                <ul className="space-y-1.5">
                   {state.cells
                     .filter((c) => c.position !== freePos)
                     .map((c) => (

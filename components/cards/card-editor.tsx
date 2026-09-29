@@ -380,7 +380,7 @@ export function CardEditor({
 
       {/* Challenges — as the bingo board or a list */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Label>The card</Label>
           <div className="flex items-center gap-3">
             <span className={cn("text-xs font-medium", counterOk ? "text-primary" : "text-muted-foreground")}>
@@ -482,7 +482,7 @@ export function CardEditor({
 
       {/* Tile editor dialog */}
       <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing !== null ? `Tile ${editing + 1}` : "Tile"}</DialogTitle>
           </DialogHeader>
