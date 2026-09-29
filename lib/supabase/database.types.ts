@@ -641,9 +641,21 @@ export type Database = {
       }
     }
     Functions: {
+      _sync_bingo: {
+        Args: {
+          p_card_id: string
+          p_complete: boolean
+          p_line_key: string
+          p_player_card_id: string
+          p_type: Database["public"]["Enums"]["bingo_type"]
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       accept_invite: {
         Args: { p_token: string }
         Returns: {
+          background_path: string | null
           created_at: string
           description: string | null
           host_id: string
@@ -655,10 +667,19 @@ export type Database = {
           status: Database["public"]["Enums"]["group_status"]
           updated_at: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "groups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
+      check_bingo: { Args: { p_player_card_id: string }; Returns: undefined }
+      check_coop_blackout: { Args: { p_board_id: string }; Returns: undefined }
       create_group: {
         Args: { p_description?: string; p_name: string }
         Returns: {
+          background_path: string | null
           created_at: string
           description: string | null
           host_id: string
@@ -669,6 +690,12 @@ export type Database = {
           name: string
           status: Database["public"]["Enums"]["group_status"]
           updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "groups"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       get_invite_preview: {
@@ -682,9 +709,11 @@ export type Database = {
           status: Database["public"]["Enums"]["invite_status"]
         }[]
       }
+      get_or_create_coop_board: { Args: { p_card_id: string }; Returns: string }
       join_group: {
         Args: { p_code: string }
         Returns: {
+          background_path: string | null
           created_at: string
           description: string | null
           host_id: string
@@ -695,6 +724,12 @@ export type Database = {
           name: string
           status: Database["public"]["Enums"]["group_status"]
           updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "groups"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       publish_card: {
@@ -717,13 +752,20 @@ export type Database = {
           updated_at: string
           win_condition: Database["public"]["Enums"]["card_win_condition"]
         }
+        SetofOptions: {
+          from: "*"
+          to: "cards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      check_coop_blackout: { Args: { p_board_id: string }; Returns: undefined }
-      get_or_create_coop_board: { Args: { p_card_id: string }; Returns: string }
       rebuild_coop_board: { Args: { p_card_id: string }; Returns: undefined }
       rebuild_player_cards: { Args: { p_card_id: string }; Returns: undefined }
       recount_card: { Args: { p_card_id: string }; Returns: undefined }
-      reset_edited_challenge: { Args: { p_challenge_id: string }; Returns: undefined }
+      reset_edited_challenge: {
+        Args: { p_challenge_id: string }
+        Returns: undefined
+      }
       transfer_ownership: {
         Args: { p_group_id: string; p_new_owner: string }
         Returns: undefined
