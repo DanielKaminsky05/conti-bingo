@@ -48,8 +48,15 @@ export async function updateSession(request: NextRequest) {
     path.startsWith('/login') ||
     path.startsWith('/signup') ||
     path.startsWith('/confirm-email') ||
+    path.startsWith('/forgot-password') ||
+    path.startsWith('/reset-password') ||
     path.startsWith('/auth') ||
     path.startsWith('/invite')
+
+  // Expose the pathname to Server Components (layouts can't read it directly in
+  // App Router). The (auth) layout uses this to allow /reset-password to render
+  // for a signed-in recovery session instead of bouncing it to "/".
+  supabaseResponse.headers.set('x-pathname', path)
 
   if (!user && !isPublic) {
     // no user -> redirect to login, preserving where they were headed

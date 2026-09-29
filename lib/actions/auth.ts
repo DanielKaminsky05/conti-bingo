@@ -3,7 +3,14 @@
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { ok, fail, withResult, ActionError, type ActionResult } from '@/lib/actions/result'
-import { signUpSchema, signInSchema, resendSchema } from '@/lib/validation/auth'
+import { requireUser } from '@/lib/auth/session'
+import {
+  signUpSchema,
+  signInSchema,
+  resendSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '@/lib/validation/auth'
 
 /**
  * Derive the site origin for building `emailRedirectTo`. Prefers the request
@@ -122,4 +129,52 @@ export async function resendConfirmation(input: unknown): Promise<ActionResult<n
     return fail('error', error.message)
   }
   return ok(null)
+}
+
+/**
+ * A5 — Request a password-reset email. Public (no session). Supabase sends a
+ * recovery link that lands on `/auth/callback?next=/reset-password`, which
+ * exchanges the code for a session and forwards to the reset page. Does NOT leak
+ * whether the address exists — always returns success (mirrors resendConfirmation).
+ */
+export async function requestPasswordReset(input: unknown): Promise<ActionResult<null>> {
+  const parsed = forgotPasswordSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail('validation', parsed.error.issues[0]?.message ?? 'Invalid input.')
+  }
+  const { email } = parsed.data
+
+  const origin = await resolveOrigin()
+  const supabase = await createClient()
+
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=/reset-password`,
+  })
+
+  // Always report success so we don't reveal whether the email is registered.
+  return ok(null)
+}
+
+/**
+ * A6 — Set a new password for the signed-in user. Requires an authenticated
+ * session (the recovery session established by the email link). Validates that
+ * the two password fields match before calling Supabase.
+ */
+export async function updatePassword(input: unknown): Promise<ActionResult<null>> {
+  return withResult(async () => {
+    const parsed = resetPasswordSchema.safeParse(input)
+    if (!parsed.success) {
+      throw new ActionError('validation', parsed.error.issues[0]?.message ?? 'Invalid input.')
+    }
+    const { password } = parsed.data
+
+    const { supabase } = await requireUser()
+
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) {
+      throw new ActionError('error', error.message)
+    }
+
+    return null
+  })
 }

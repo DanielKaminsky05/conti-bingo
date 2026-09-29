@@ -1,10 +1,16 @@
 import { describe, it, expect } from 'vitest'
-import { signUpSchema, signInSchema, resendSchema } from '@/lib/validation/auth'
+import {
+  signUpSchema,
+  signInSchema,
+  resendSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '@/lib/validation/auth'
 
 /**
- * Unit tests for the Auth Zod schemas (A1 signUp / A2 signIn / A4 resendConfirmation).
- * Contract (api-endpoints.md A1/A2/A4): valid email, name 1-80 chars, password min length
- * (>= 8). Tests assert against the schema SHAPES; the endpoint agent owns the implementation.
+ * Unit tests for the Auth Zod schemas (A1 signUp / A2 signIn / A4 resendConfirmation
+ * / A5 forgotPassword / A6 resetPassword). Contract (api-endpoints.md): valid email,
+ * name 1-80 chars, password min length (>= 8), reset requires matching confirm.
  */
 
 const validEmail = 'player@example.test'
@@ -114,6 +120,71 @@ describe('resendSchema', () => {
 
   it('rejects a missing email', () => {
     const res = resendSchema.safeParse({})
+    expect(res.success).toBe(false)
+  })
+})
+
+describe('forgotPasswordSchema', () => {
+  it('parses a valid { email }', () => {
+    const parsed = forgotPasswordSchema.parse({ email: validEmail })
+    expect(parsed.email).toBe(validEmail)
+  })
+
+  it('rejects a malformed email', () => {
+    const res = forgotPasswordSchema.safeParse({ email: 'nope' })
+    expect(res.success).toBe(false)
+  })
+
+  it('rejects a missing email', () => {
+    const res = forgotPasswordSchema.safeParse({})
+    expect(res.success).toBe(false)
+  })
+})
+
+describe('resetPasswordSchema', () => {
+  it('parses a valid { password, confirm } that match', () => {
+    const parsed = resetPasswordSchema.parse({
+      password: validPassword,
+      confirm: validPassword,
+    })
+    expect(parsed.password).toBe(validPassword)
+    expect(parsed.confirm).toBe(validPassword)
+  })
+
+  it('accepts a password of exactly 8 characters (boundary)', () => {
+    const res = resetPasswordSchema.safeParse({
+      password: 'eightch8',
+      confirm: 'eightch8',
+    })
+    expect(res.success).toBe(true)
+  })
+
+  it('rejects a password shorter than 8 characters', () => {
+    const res = resetPasswordSchema.safeParse({
+      password: 'short7!', // 7 chars
+      confirm: 'short7!',
+    })
+    expect(res.success).toBe(false)
+    if (!res.success) {
+      expect(res.error.issues.some((i) => i.path[0] === 'password')).toBe(true)
+    }
+  })
+
+  it('rejects when password and confirm do not match (error on confirm)', () => {
+    const res = resetPasswordSchema.safeParse({
+      password: validPassword,
+      confirm: 'Different1!',
+    })
+    expect(res.success).toBe(false)
+    if (!res.success) {
+      const mismatch = res.error.issues.find((i) => i.path[0] === 'confirm')
+      expect(mismatch).toBeDefined()
+      expect(mismatch?.message).toBe('Passwords do not match.')
+    }
+  })
+
+  it('rejects a missing confirm field', () => {
+    const res = resetPasswordSchema.safeParse({ password: validPassword })
     expect(res.success).toBe(false)
   })
 })
