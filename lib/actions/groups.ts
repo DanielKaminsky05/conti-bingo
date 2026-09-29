@@ -333,3 +333,75 @@ export async function uploadGroupImage(formData: FormData): Promise<ActionResult
     return { imagePath: data.image_path }
   })
 }
+
+/** G14 — upload/replace the group's full-bleed background image (RLS: owner/admin) and store its path. */
+export async function uploadGroupBackground(
+  formData: FormData,
+): Promise<ActionResult<{ backgroundPath: string }>> {
+  return withResult(async () => {
+    const { supabase } = await requireUser()
+
+    const groupId = formData.get('groupId')
+    const file = formData.get('file')
+
+    if (typeof groupId !== 'string' || !groupIdSchema.safeParse({ groupId }).success) {
+      throw new ActionError('validation', 'A valid groupId is required.')
+    }
+    if (!(file instanceof File)) {
+      throw new ActionError('validation', 'A file is required.')
+    }
+    if (!file.type.startsWith('image/')) {
+      throw new ActionError('validation', 'File must be an image.')
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      throw new ActionError('validation', 'Image must be 5 MB or smaller.')
+    }
+
+    const path = `${groupId}/${crypto.randomUUID()}-${file.name}`
+    const { error: uploadError } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (uploadError) throw new ActionError('error', uploadError.message)
+
+    const { data, error } = await supabase
+      .from('groups')
+      .update({ background_path: path })
+      .eq('id', groupId)
+      .select('background_path')
+      .single()
+    if (error) throw new ActionError('error', error.message)
+    if (!data?.background_path) throw new ActionError('not_found', 'Group not found or not permitted.')
+
+    revalidatePath(`/groups/${groupId}`)
+    revalidatePath('/groups')
+    return { backgroundPath: data.background_path }
+  })
+}
+
+/** G15 — clear the group's background image (RLS: owner/admin). Leaves the object in Storage. */
+export async function removeGroupBackground(
+  input: { groupId: string },
+): Promise<ActionResult<{ groupId: string }>> {
+  return withResult(async () => {
+    const { supabase } = await requireUser()
+    const parsed = groupIdSchema.safeParse(input)
+    if (!parsed.success) {
+      throw new ActionError('validation', parsed.error.issues[0]?.message ?? 'Invalid input.')
+    }
+
+    const { groupId } = parsed.data
+    const { data, error } = await supabase
+      .from('groups')
+      .update({ background_path: null })
+      .eq('id', groupId)
+      .select('id')
+    if (error) throw new ActionError('error', error.message)
+    if (!data || data.length === 0) {
+      throw new ActionError('forbidden', 'Group not found or not permitted.')
+    }
+
+    revalidatePath(`/groups/${groupId}`)
+    revalidatePath('/groups')
+    return { groupId }
+  })
+}

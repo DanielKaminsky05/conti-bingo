@@ -4,6 +4,7 @@ import { getGroup } from "@/lib/queries/groups"
 import { getMyRole, isHost } from "@/lib/queries/membership"
 import { GroupNav } from "@/components/app/group-nav"
 import { publicStorageUrl } from "@/lib/storage-url"
+import { cn } from "@/lib/utils"
 
 export default async function GroupLayout({
   children,
@@ -22,10 +23,29 @@ export default async function GroupLayout({
   }
   const role = await getMyRole(id)
   const image = publicStorageUrl("group-images", group.image_path)
+  const background = publicStorageUrl("group-images", group.background_path)
 
   return (
-    <div className="space-y-4">
-      <header className="flex items-center gap-3">
+    <div className="relative space-y-4">
+      {background && (
+        // Full-bleed backdrop behind ALL group pages. Fixed so it fills the
+        // viewport regardless of the centered content column; -z-10 keeps it
+        // behind the app content. A scrim keeps text/tiles legible in both
+        // light and dark mode.
+        <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={background} alt="" className="size-full object-cover" />
+          <div className="absolute inset-0 bg-background/70 dark:bg-background/75" />
+        </div>
+      )}
+
+      <header
+        className={cn(
+          "flex items-center gap-3",
+          background &&
+            "rounded-2xl border border-foreground/10 bg-background/70 p-3 shadow-sm backdrop-blur-sm",
+        )}
+      >
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" className="size-11 rounded-xl object-cover" />
@@ -42,7 +62,14 @@ export default async function GroupLayout({
         </div>
       </header>
       <GroupNav groupId={id} isHost={isHost(role)} />
-      <div>{children}</div>
+      <div
+        className={cn(
+          background &&
+            "rounded-2xl border border-foreground/10 bg-background/70 p-3 shadow-sm backdrop-blur-sm sm:p-4",
+        )}
+      >
+        {children}
+      </div>
     </div>
   )
 }

@@ -300,6 +300,49 @@ describe.skipIf(!hasServiceRole)('groups (integration)', () => {
     expect(ownerStays.data![0].role).toBe('owner')
   })
 
+  it('lets the owner set and read back background_path, but blocks a non-member (RLS)', async () => {
+    const owner = await newUser('Owner H')
+    const outsider = await newUser('Outsider H')
+
+    const { data: group } = await owner.client.rpc('create_group', {
+      p_name: `Group ${randomUUID()}`,
+    })
+    const bgPath = `${group!.id}/${randomUUID()}-bg.jpg`
+
+    // Owner can set the background path.
+    const set = await owner.client
+      .from('groups')
+      .update({ background_path: bgPath })
+      .eq('id', group!.id)
+      .select('background_path')
+      .single()
+    expect(set.error).toBeNull()
+    expect(set.data!.background_path).toBe(bgPath)
+
+    // Read back via a fresh select.
+    const readBack = await owner.client
+      .from('groups')
+      .select('background_path')
+      .eq('id', group!.id)
+      .single()
+    expect(readBack.data!.background_path).toBe(bgPath)
+
+    // A non-member cannot update it (RLS: no rows affected, value unchanged).
+    const hacked = `${group!.id}/${randomUUID()}-hacked.jpg`
+    const attempt = await outsider.client
+      .from('groups')
+      .update({ background_path: hacked })
+      .eq('id', group!.id)
+      .select('id')
+    expect(attempt.data ?? []).toHaveLength(0)
+    const after = await owner.client
+      .from('groups')
+      .select('background_path')
+      .eq('id', group!.id)
+      .single()
+    expect(after.data!.background_path).toBe(bgPath)
+  })
+
   it('rejects unauthenticated create_group (anon)', async () => {
     const anon = anonClient()
     const { error } = await anon.rpc('create_group', { p_name: `Group ${randomUUID()}` })
