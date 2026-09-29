@@ -214,6 +214,7 @@ export type Database = {
       }
       groups: {
         Row: {
+          background_path: string | null
           created_at: string
           description: string | null
           host_id: string
@@ -226,6 +227,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          background_path?: string | null
           created_at?: string
           description?: string | null
           host_id: string
@@ -238,6 +240,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          background_path?: string | null
           created_at?: string
           description?: string | null
           host_id?: string

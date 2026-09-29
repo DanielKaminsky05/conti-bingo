@@ -15,7 +15,9 @@ import { toast } from "sonner"
 import {
   archiveGroup,
   deleteGroup,
+  removeGroupBackground,
   updateGroup,
+  uploadGroupBackground,
   uploadGroupImage,
 } from "@/lib/actions/groups"
 import type { Tables, Enums } from "@/lib/supabase/database.types"
@@ -61,6 +63,7 @@ export function GroupSettingsForm({
     <div className="space-y-4">
       <DetailsSection group={group} router={router} />
       <ImageSection group={group} router={router} />
+      <BackgroundSection group={group} router={router} />
       <DangerZone group={group} isOwner={isOwner} router={router} />
     </div>
   )
@@ -254,6 +257,132 @@ function ImageSection({ group, router }: { group: Group; router: Router }) {
               />
             </div>
             <div className="flex justify-end">
+              <SubmitButton type="submit" pending={pending} disabled={!selected}>
+                <UploadIcon />
+                Upload
+              </SubmitButton>
+            </div>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+function BackgroundSection({ group, router }: { group: Group; router: Router }) {
+  const [pending, start] = useTransition()
+  const [removePending, startRemove] = useTransition()
+  const [selected, setSelected] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const currentUrl = publicStorageUrl("group-images", group.background_path)
+
+  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    if (!file) {
+      setSelected(null)
+      setPreviewUrl(null)
+      return
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("File must be an image.")
+      e.target.value = ""
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error("Image must be 5 MB or smaller.")
+      e.target.value = ""
+      return
+    }
+    setSelected(file)
+    setPreviewUrl(URL.createObjectURL(file))
+  }
+
+  function onUpload(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!selected) {
+      toast.error("Choose an image first.")
+      return
+    }
+    const fd = new FormData()
+    fd.append("groupId", group.id)
+    fd.append("file", selected)
+    start(async () => {
+      const res = await uploadGroupBackground(fd)
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      toast.success("Background updated.")
+      setSelected(null)
+      setPreviewUrl(null)
+      if (inputRef.current) inputRef.current.value = ""
+      router.refresh()
+    })
+  }
+
+  function onRemove() {
+    startRemove(async () => {
+      const res = await removeGroupBackground({ groupId: group.id })
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      toast.success("Background removed.")
+      setSelected(null)
+      setPreviewUrl(null)
+      if (inputRef.current) inputRef.current.value = ""
+      router.refresh()
+    })
+  }
+
+  const shown = previewUrl ?? currentUrl
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Background image</CardTitle>
+        <CardDescription>
+          A full-screen backdrop shown behind this group&apos;s pages. PNG or JPG, up to 5 MB.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onUpload} className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          {shown ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={shown}
+              alt=""
+              className="h-20 w-32 shrink-0 rounded-xl object-cover ring-1 ring-foreground/10"
+            />
+          ) : (
+            <div className="grid h-20 w-32 shrink-0 place-items-center rounded-xl bg-secondary text-secondary-foreground ring-1 ring-foreground/10">
+              <ImageIcon className="size-7 opacity-70" />
+            </div>
+          )}
+          <div className="flex-1 space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="group-background">Choose a new background</Label>
+              <Input
+                id="group-background"
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                onChange={onPick}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              {group.background_path && (
+                <SubmitButton
+                  type="button"
+                  variant="outline"
+                  pending={removePending}
+                  onClick={onRemove}
+                >
+                  <Trash2Icon />
+                  Remove
+                </SubmitButton>
+              )}
               <SubmitButton type="submit" pending={pending} disabled={!selected}>
                 <UploadIcon />
                 Upload
