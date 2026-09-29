@@ -22,6 +22,7 @@ export function CardListItem({
   groupId,
   card,
   challengeCount,
+  href,
 }: {
   groupId: string
   card: {
@@ -31,10 +32,12 @@ export function CardListItem({
     grid_size: number
   }
   challengeCount?: number
+  /** Link target; defaults to the read-only card view. */
+  href?: string
 }) {
   return (
     <Link
-      href={`/groups/${groupId}/cards/${card.id}`}
+      href={href ?? `/groups/${groupId}/cards/${card.id}`}
       className={cn(
         "flex items-center gap-3 rounded-xl bg-card px-4 py-3 text-card-foreground ring-1 ring-foreground/10 transition-colors",
         "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

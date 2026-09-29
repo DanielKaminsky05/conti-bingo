@@ -82,13 +82,18 @@ export function CardEditor({
   mode,
   initial,
   showPublish = false,
+  returnHref,
 }: {
   groupId: string
   mode: "create" | "edit"
   initial?: CardEditorInitial
   showPublish?: boolean
+  /** Where to navigate after a successful save/publish. Defaults to the group's
+      card management page. */
+  returnHref?: string
 }) {
   const router = useRouter()
+  const doneHref = returnHref ?? `/groups/${groupId}/manage/cards`
   const [pending, start] = useTransition()
 
   const [title, setTitle] = useState(initial?.title ?? "")
@@ -208,7 +213,7 @@ export function CardEditor({
         } else {
           toast.success("Card updated.")
         }
-        router.push(`/groups/${groupId}/cards`)
+        router.push(doneHref)
         router.refresh()
         return
       }
@@ -219,7 +224,7 @@ export function CardEditor({
         const pub = await publishCard({ cardId: res.data.cardId })
         if (!pub.ok) {
           toast.error(pub.error)
-          router.push(`/groups/${groupId}/cards`)
+          router.push(doneHref)
           router.refresh()
           return
         }
@@ -227,7 +232,7 @@ export function CardEditor({
       } else {
         toast.success("Draft saved.")
       }
-      router.push(`/groups/${groupId}/cards`)
+      router.push(doneHref)
       router.refresh()
     })
   }

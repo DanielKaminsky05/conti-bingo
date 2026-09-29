@@ -72,11 +72,15 @@ export function MemberList({
   role,
   currentUserId,
   groupId,
+  manage = false,
 }: {
   members: MemberWithProfile[]
   role: Role | null
   currentUserId: string | null
   groupId: string
+  /** Show host management actions (promote/demote/remove/transfer). When false
+      (the read-only roster tab) only the viewer's own "Leave group" is offered. */
+  manage?: boolean
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -122,15 +126,17 @@ export function MemberList({
         const isSelf = m.user_id === currentUserId
         const targetIsOwner = m.role === "owner"
 
-        // What can the current viewer do to THIS member?
-        const canPromote = isOwner && m.role === "member"
-        const canDemote = isOwner && m.role === "admin"
+        // What can the current viewer do to THIS member? Host actions only in
+        // the Manage view; the read-only roster offers just self "Leave group".
+        const canPromote = manage && isOwner && m.role === "member"
+        const canDemote = manage && isOwner && m.role === "admin"
         // Owner can remove admins/members; admin can remove only members. Never the owner.
         const canRemove =
+          manage &&
           !targetIsOwner &&
           !isSelf &&
           (isOwner || (isAdmin && m.role === "member"))
-        const canTransfer = isOwner && !isSelf && !targetIsOwner
+        const canTransfer = manage && isOwner && !isSelf && !targetIsOwner
 
         const hasMenu =
           isSelf || (isHost && (canPromote || canDemote || canRemove || canTransfer))

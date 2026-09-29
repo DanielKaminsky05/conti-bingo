@@ -2,27 +2,16 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  Grid3x3Icon,
-  TrophyIcon,
-  LayersIcon,
-  UsersIcon,
-  SettingsIcon,
-} from "lucide-react"
+import { Grid3x3Icon, TrophyIcon, LayersIcon, UsersIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
  * Bottom icon nav for the installed PWA ("app version"). Hidden in a normal
  * browser tab; shown only under `display-mode: standalone` (the `standalone:`
- * variant). Mirrors GroupNav's tabs.
+ * variant). Mirrors GroupNav's player tabs. Host management lives behind the
+ * Manage gear in the group header.
  */
-export function GroupBottomNav({
-  groupId,
-  isHost,
-}: {
-  groupId: string
-  isHost: boolean
-}) {
+export function GroupBottomNav({ groupId }: { groupId: string }) {
   const pathname = usePathname()
   const base = `/groups/${groupId}`
   const items = [
@@ -30,9 +19,6 @@ export function GroupBottomNav({
     { href: `${base}/leaderboard`, label: "Ranks", icon: TrophyIcon },
     { href: `${base}/cards`, label: "Cards", icon: LayersIcon },
     { href: `${base}/members`, label: "Members", icon: UsersIcon },
-    ...(isHost
-      ? [{ href: `${base}/settings`, label: "Settings", icon: SettingsIcon }]
-      : []),
   ]
 
   return (

@@ -1,9 +1,12 @@
 import type { ReactNode } from "react"
+import Link from "next/link"
 import { notFound } from "next/navigation"
+import { SettingsIcon } from "lucide-react"
 import { getGroup } from "@/lib/queries/groups"
 import { getMyRole, isHost } from "@/lib/queries/membership"
 import { GroupNav } from "@/components/app/group-nav"
 import { GroupBottomNav } from "@/components/app/group-bottom-nav"
+import { buttonVariants } from "@/components/ui/button"
 import { publicStorageUrl } from "@/lib/storage-url"
 import { cn } from "@/lib/utils"
 
@@ -55,16 +58,25 @@ export default async function GroupLayout({
             {group.name.slice(0, 1).toUpperCase()}
           </div>
         )}
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate font-heading text-xl font-semibold">{group.name}</h1>
           {group.description && (
             <p className="truncate text-sm text-muted-foreground">{group.description}</p>
           )}
         </div>
+        {isHost(role) && (
+          <Link
+            href={`/groups/${id}/manage`}
+            aria-label="Manage group"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "shrink-0")}
+          >
+            <SettingsIcon />
+          </Link>
+        )}
       </header>
       {/* Top tabs in the browser; hidden in the installed app (bottom nav instead). */}
       <div className="standalone:hidden">
-        <GroupNav groupId={id} isHost={isHost(role)} framed={!!background} />
+        <GroupNav groupId={id} framed={!!background} />
       </div>
       <div
         className={cn(
@@ -74,7 +86,7 @@ export default async function GroupLayout({
       >
         {children}
       </div>
-      <GroupBottomNav groupId={id} isHost={isHost(role)} />
+      <GroupBottomNav groupId={id} />
     </div>
   )
 }

@@ -33,7 +33,7 @@ export default async function GroupPlayPage({
           description="Create a bingo card to kick off the game for your group."
           action={
             <Link
-              href={`/groups/${id}/cards/new`}
+              href={`/groups/${id}/manage/cards/new`}
               className={cn(buttonVariants({ variant: "default" }))}
             >
               Create a card

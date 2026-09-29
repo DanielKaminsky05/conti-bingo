@@ -11,7 +11,6 @@ import {
 } from "lucide-react"
 import { getCard } from "@/lib/queries/cards"
 import { getMyRole, isHost } from "@/lib/queries/membership"
-import { CardEditor, type CardEditorInitial } from "@/components/cards/card-editor"
 import { CardChallengesView } from "@/components/cards/card-challenges-view"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
@@ -44,41 +43,7 @@ export default async function CardDetailPage({
   const host = isHost(await getMyRole(id))
   const challenges = card.challenges ?? []
 
-  // Hosts editing a draft get the full editor.
-  if (host && card.status === "draft") {
-    const initial: CardEditorInitial = {
-      cardId: card.id,
-      title: card.title,
-      description: card.description,
-      gridSize: card.grid_size,
-      layoutMode: card.layout_mode,
-      freeSpace: card.free_space,
-      winCondition: card.win_condition,
-      startsAt: card.starts_at,
-      endsAt: card.ends_at,
-      challenges: challenges.map((c) => ({ text: c.text, points: c.points })),
-    }
-    return (
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Link
-            href={`/groups/${id}/cards`}
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2 w-fit")}
-          >
-            <ArrowLeftIcon />
-            Cards
-          </Link>
-          <div className="flex items-center gap-2">
-            <h2 className="font-heading text-lg font-semibold">Edit draft</h2>
-            <Badge variant="secondary">Draft</Badge>
-          </div>
-        </div>
-        <CardEditor groupId={id} mode="edit" initial={initial} showPublish />
-      </div>
-    )
-  }
-
-  // Everyone else (members, or hosts viewing active/archived) sees a read-only view.
+  // Read-only card view for everyone. Draft editing lives in Manage → Cards.
   const statusVariant =
     card.status === "active" ? "default" : card.status === "draft" ? "secondary" : "outline"
   const start = formatDateTime(card.starts_at)
@@ -103,7 +68,7 @@ export default async function CardDetailPage({
           </div>
           {host && card.status === "active" && (
             <Link
-              href={`/groups/${id}/cards/new`}
+              href={`/groups/${id}/manage/cards/new`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
               <RefreshCwIcon />

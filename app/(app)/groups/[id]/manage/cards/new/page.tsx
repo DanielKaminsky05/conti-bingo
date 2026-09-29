@@ -1,29 +1,31 @@
 import Link from "next/link"
-import { notFound } from "next/navigation"
 import { ArrowLeftIcon } from "lucide-react"
-import { getMyRole, isHost } from "@/lib/queries/membership"
 import { CardEditor } from "@/components/cards/card-editor"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-export default async function NewCardPage({ params }: { params: Promise<{ id: string }> }) {
+// Host gating is enforced by the manage/ layout.
+export default async function NewCardPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const { id } = await params
-
-  if (!isHost(await getMyRole(id))) notFound()
+  const manageCards = `/groups/${id}/manage/cards`
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <Link
-          href={`/groups/${id}/cards`}
+          href={manageCards}
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2 w-fit")}
         >
           <ArrowLeftIcon />
           Cards
         </Link>
-        <h2 className="font-heading text-lg font-semibold">New card</h2>
+        <h3 className="font-heading text-base font-semibold">New card</h3>
       </div>
-      <CardEditor groupId={id} mode="create" />
+      <CardEditor groupId={id} mode="create" returnHref={manageCards} />
     </div>
   )
 }

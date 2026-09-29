@@ -6,11 +6,9 @@ import { cn } from "@/lib/utils"
 
 export function GroupNav({
   groupId,
-  isHost,
   framed = false,
 }: {
   groupId: string
-  isHost: boolean
   /** When a group background image is present, render the tabs in a frosted
       panel (matching the header/content) so they stay legible over the image. */
   framed?: boolean
@@ -22,7 +20,6 @@ export function GroupNav({
     { href: `${base}/leaderboard`, label: "Leaderboard" },
     { href: `${base}/cards`, label: "Cards" },
     { href: `${base}/members`, label: "Members" },
-    ...(isHost ? [{ href: `${base}/settings`, label: "Settings" }] : []),
   ]
 
   return (
