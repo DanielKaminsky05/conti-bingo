@@ -10,6 +10,7 @@ import { buttonVariants } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -60,10 +61,12 @@ export function AppHeader({ profile }: { profile: Tables<"profiles"> }) {
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>
-                {profile.name}
-                <div className="text-xs font-normal text-muted-foreground">@{profile.username}</div>
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>
+                  {profile.name}
+                  <div className="text-xs font-normal text-muted-foreground">@{profile.username}</div>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => router.push("/profile")}>
                 <UserIcon /> Profile
