@@ -1,16 +1,8 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import {
-  PlusIcon,
-  Trash2Icon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  AlertTriangleIcon,
-  SaveIcon,
-  SendIcon,
-} from "lucide-react"
+import { AlertTriangleIcon, SaveIcon, SendIcon, PlusIcon } from "lucide-react"
 import { toast } from "sonner"
 import { createCard, updateCard, publishCard } from "@/lib/actions/cards"
 import { Button } from "@/components/ui/button"
@@ -18,6 +10,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubmitButton } from "@/components/common/submit-button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import type { Enums } from "@/lib/supabase/database.types"
 
@@ -25,11 +25,7 @@ type GridSize = 4 | 5 | 6
 type LayoutMode = Enums<"card_layout_mode">
 type WinCondition = Enums<"card_win_condition">
 
-type ChallengeDraft = {
-  key: string
-  text: string
-  points: string
-}
+type ChallengeDraft = { text: string; points: string }
 
 export type CardEditorInitial = {
   cardId: string
@@ -44,17 +40,25 @@ export type CardEditorInitial = {
   challenges: { text: string; points: number }[]
 }
 
-let keySeq = 0
-function nextKey() {
-  keySeq += 1
-  return `c${keySeq}`
+const GRID_COLS: Record<number, string> = {
+  4: "grid-cols-4",
+  5: "grid-cols-5",
+  6: "grid-cols-6",
 }
 
 function emptyChallenge(): ChallengeDraft {
-  return { key: nextKey(), text: "", points: "1" }
+  return { text: "", points: "1" }
 }
 
-/** Convert an ISO timestamp to a value for <input type="datetime-local"> (local time). */
+/** Resize a challenge list to `len`, preserving existing entries by index. */
+function resize(list: ChallengeDraft[], len: number): ChallengeDraft[] {
+  if (list.length === len) return list
+  if (list.length < len) {
+    return [...list, ...Array.from({ length: len - list.length }, emptyChallenge)]
+  }
+  return list.slice(0, len)
+}
+
 function isoToLocalInput(iso: string | null): string {
   if (!iso) return ""
   const d = new Date(iso)
@@ -65,7 +69,6 @@ function isoToLocalInput(iso: string | null): string {
   )}`
 }
 
-/** Convert a datetime-local value back to an ISO string, or undefined when empty. */
 function localInputToIso(value: string): string | undefined {
   if (!value) return undefined
   const d = new Date(value)
@@ -82,7 +85,6 @@ export function CardEditor({
   groupId: string
   mode: "create" | "edit"
   initial?: CardEditorInitial
-  /** In edit mode (drafts), also offer a "Save & publish" action. */
   showPublish?: boolean
 }) {
   const router = useRouter()
@@ -90,9 +92,7 @@ export function CardEditor({
 
   const [title, setTitle] = useState(initial?.title ?? "")
   const [description, setDescription] = useState(initial?.description ?? "")
-  const [gridSize, setGridSize] = useState<GridSize>(
-    (initial?.gridSize as GridSize) ?? 5
-  )
+  const [gridSize, setGridSize] = useState<GridSize>((initial?.gridSize as GridSize) ?? 5)
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(initial?.layoutMode ?? "shuffled")
   const [freeSpace, setFreeSpace] = useState<boolean>(initial?.freeSpace ?? false)
   const [winCondition, setWinCondition] = useState<WinCondition>(initial?.winCondition ?? "line")
@@ -100,80 +100,63 @@ export function CardEditor({
   const [endsAt, setEndsAt] = useState<string>(isoToLocalInput(initial?.endsAt ?? null))
   const [challenges, setChallenges] = useState<ChallengeDraft[]>(
     initial?.challenges?.length
-      ? initial.challenges.map((c) => ({ key: nextKey(), text: c.text, points: String(c.points) }))
-      : [emptyChallenge()]
+      ? initial.challenges.map((c) => ({ text: c.text, points: String(c.points) }))
+      : []
   )
+  const [editing, setEditing] = useState<number | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // D6 — free space only valid on odd grids; auto-disable on even grid sizes.
+  // D6 — free space only valid on odd grids.
   const evenGrid = gridSize % 2 === 0
   const effectiveFreeSpace = freeSpace && !evenGrid
   const required = gridSize * gridSize - (effectiveFreeSpace ? 1 : 0)
-  const filledCount = challenges.filter((c) => c.text.trim().length > 0).length
+  const freePos = effectiveFreeSpace ? (gridSize * gridSize - 1) / 2 : -1
 
+  // Keep the challenge list sized to exactly one entry per non-free tile.
+  useEffect(() => {
+    setChallenges((prev) => resize(prev, required))
+  }, [required])
+
+  const filledCount = challenges.filter((c) => c.text.trim().length > 0).length
   const structuralWarning = mode === "edit"
+  const gridSizes: GridSize[] = useMemo(() => [4, 5, 6], [])
 
   function setGrid(size: GridSize) {
     setGridSize(size)
-    // Auto-disable free space when moving to an even grid (D6).
     if (size % 2 === 0 && freeSpace) setFreeSpace(false)
   }
 
-  function addChallenge() {
-    setChallenges((prev) => [...prev, emptyChallenge()])
+  function updateChallenge(index: number, patch: Partial<ChallengeDraft>) {
+    setChallenges((prev) => prev.map((c, i) => (i === index ? { ...c, ...patch } : c)))
   }
 
-  function removeChallenge(key: string) {
-    setChallenges((prev) => (prev.length <= 1 ? prev : prev.filter((c) => c.key !== key)))
-  }
-
-  function updateChallenge(key: string, patch: Partial<ChallengeDraft>) {
-    setChallenges((prev) => prev.map((c) => (c.key === key ? { ...c, ...patch } : c)))
-  }
-
-  function move(index: number, dir: -1 | 1) {
-    setChallenges((prev) => {
-      const next = index + dir
-      if (next < 0 || next >= prev.length) return prev
-      const copy = [...prev]
-      const [item] = copy.splice(index, 1)
-      copy.splice(next, 0, item)
-      return copy
-    })
-  }
-
-  /** Mirror the Zod rules client-side; returns the built challenge payload on success. */
   function validate():
     | { ok: true; payloadChallenges: { text: string; points: number }[] }
     | { ok: false } {
     const next: Record<string, string> = {}
-
     if (!title.trim()) next.title = "Title is required."
     else if (title.trim().length > 120) next.title = "Title is too long."
-
     if (description.trim().length > 2000) next.description = "Description is too long."
 
     const payloadChallenges: { text: string; points: number }[] = []
+    let emptyTiles = 0
+    let badPoints = false
     for (const c of challenges) {
       const text = c.text.trim()
-      if (!text) continue
+      if (!text) {
+        emptyTiles++
+        continue
+      }
       const points = Number(c.points)
       if (!Number.isInteger(points) || points <= 0) {
-        next.challenges = "Points must be a whole number greater than zero."
+        badPoints = true
         break
       }
       payloadChallenges.push({ text, points })
     }
-
-    if (!next.challenges) {
-      if (payloadChallenges.length === 0) {
-        next.challenges = "Add at least one challenge."
-      } else if (payloadChallenges.length < required) {
-        next.challenges = `Need at least ${required} challenges for a ${gridSize}×${gridSize} grid${
-          effectiveFreeSpace ? " with a free space" : ""
-        }.`
-      }
-    }
+    if (badPoints) next.challenges = "Points must be a whole number greater than zero."
+    else if (emptyTiles > 0)
+      next.challenges = `Fill in every tile — ${emptyTiles} still empty.`
 
     const startIso = localInputToIso(startsAt)
     const endIso = localInputToIso(endsAt)
@@ -211,10 +194,7 @@ export function CardEditor({
     start(async () => {
       if (mode === "edit" && initial) {
         const res = await updateCard({ cardId: initial.cardId, ...base })
-        if (!res.ok) {
-          toast.error(res.error)
-          return
-        }
+        if (!res.ok) return void toast.error(res.error)
         if (publish) {
           const pub = await publishCard({ cardId: initial.cardId })
           if (!pub.ok) {
@@ -232,16 +212,11 @@ export function CardEditor({
       }
 
       const res = await createCard({ groupId, ...base })
-      if (!res.ok) {
-        toast.error(res.error)
-        return
-      }
-
+      if (!res.ok) return void toast.error(res.error)
       if (publish) {
         const pub = await publishCard({ cardId: res.data.cardId })
         if (!pub.ok) {
           toast.error(pub.error)
-          // The draft was still created; send them to the list to publish manually.
           router.push(`/groups/${groupId}/cards`)
           router.refresh()
           return
@@ -256,7 +231,16 @@ export function CardEditor({
   }
 
   const counterOk = filledCount >= required
-  const gridSizes: GridSize[] = useMemo(() => [4, 5, 6], [])
+  const current = editing !== null ? challenges[editing] : null
+
+  // Build the visual grid: one cell per position, mapping non-free positions to
+  // challenge entries in order.
+  let ci = -1
+  const tiles = Array.from({ length: gridSize * gridSize }, (_, pos) => {
+    if (pos === freePos) return { pos, free: true as const, index: -1 }
+    ci += 1
+    return { pos, free: false as const, index: ci }
+  })
 
   return (
     <div className="space-y-6">
@@ -279,12 +263,11 @@ export function CardEditor({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={120}
-            placeholder="Movie Night Bingo"
+            placeholder="Week 1 Conti-Bingo"
             aria-invalid={!!errors.title}
           />
           {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
         </div>
-
         <div className="space-y-2">
           <Label htmlFor="card-description">Description (optional)</Label>
           <Input
@@ -302,10 +285,7 @@ export function CardEditor({
       {/* Grid size */}
       <div className="space-y-2">
         <Label>Grid size</Label>
-        <Tabs
-          value={String(gridSize)}
-          onValueChange={(v) => setGrid(Number(v) as GridSize)}
-        >
+        <Tabs value={String(gridSize)} onValueChange={(v) => setGrid(Number(v) as GridSize)}>
           <TabsList>
             {gridSizes.map((s) => (
               <TabsTrigger key={s} value={String(s)}>
@@ -340,9 +320,7 @@ export function CardEditor({
               Free space
             </Label>
             <p className="text-xs text-muted-foreground">
-              {evenGrid
-                ? "Only available on odd grids (5×5)."
-                : "Marks the center tile as free."}
+              {evenGrid ? "Only available on odd grids (5×5)." : "Marks the center tile as free."}
             </p>
           </div>
           <input
@@ -380,12 +358,7 @@ export function CardEditor({
             <Label htmlFor="starts-at" className="text-xs text-muted-foreground">
               Starts
             </Label>
-            <Input
-              id="starts-at"
-              type="datetime-local"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-            />
+            <Input id="starts-at" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="ends-at" className="text-xs text-muted-foreground">
@@ -403,98 +376,114 @@ export function CardEditor({
         {errors.endsAt && <p className="text-sm text-destructive">{errors.endsAt}</p>}
       </div>
 
-      {/* Challenges */}
+      {/* Challenges — as the bingo board */}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <Label>Challenges</Label>
-          <span
-            className={cn(
-              "text-xs font-medium",
-              counterOk ? "text-primary" : "text-muted-foreground"
-            )}
-          >
-            Need {required} challenges (have {filledCount})
+          <Label>The card</Label>
+          <span className={cn("text-xs font-medium", counterOk ? "text-primary" : "text-muted-foreground")}>
+            {filledCount}/{required} tiles filled
           </span>
         </div>
+        <p className="text-xs text-muted-foreground">Tap a tile to write its challenge.</p>
 
-        <div className="space-y-2">
-          {challenges.map((c, index) => (
-            <div
-              key={c.key}
-              className="flex items-start gap-2 rounded-xl border border-border bg-card p-2"
-            >
-              <div className="flex flex-col gap-1 pt-0.5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label="Move up"
-                  disabled={index === 0}
-                  onClick={() => move(index, -1)}
+        <div className={cn("grid gap-1.5 sm:gap-2", GRID_COLS[gridSize] ?? "grid-cols-5")}>
+          {tiles.map((tile) => {
+            if (tile.free) {
+              return (
+                <div
+                  key={tile.pos}
+                  className="flex aspect-square items-center justify-center rounded-xl bg-free text-free-foreground text-lg"
+                  aria-label="Free space"
                 >
-                  <ArrowUpIcon />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label="Move down"
-                  disabled={index === challenges.length - 1}
-                  onClick={() => move(index, 1)}
-                >
-                  <ArrowDownIcon />
-                </Button>
-              </div>
-              <div className="min-w-0 flex-1 space-y-1">
-                <Input
-                  value={c.text}
-                  onChange={(e) => updateChallenge(c.key, { text: e.target.value })}
-                  maxLength={300}
-                  placeholder={`Challenge ${index + 1}`}
-                />
-              </div>
-              <div className="w-16 shrink-0 space-y-1">
-                <Input
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={c.points}
-                  onChange={(e) => updateChallenge(c.key, { points: e.target.value })}
-                  aria-label="Points"
-                  className="text-center"
-                />
-              </div>
-              <Button
+                  ★
+                </div>
+              )
+            }
+            const c = challenges[tile.index]
+            const text = c?.text.trim() ?? ""
+            const points = Number(c?.points ?? "1")
+            return (
+              <button
+                key={tile.pos}
                 type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Remove challenge"
-                disabled={challenges.length <= 1}
-                onClick={() => removeChallenge(c.key)}
+                onClick={() => setEditing(tile.index)}
+                className={cn(
+                  "relative flex aspect-square items-center justify-center rounded-xl p-1.5 text-center text-[11px] font-bold leading-tight break-words transition-all sm:text-xs",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                  text
+                    ? "bg-card border border-tile-border text-foreground hover:border-muted-foreground/50"
+                    : "border-2 border-dashed border-tile-border text-muted-foreground hover:border-muted-foreground/60"
+                )}
               >
-                <Trash2Icon />
-              </Button>
-            </div>
-          ))}
+                {text ? (
+                  <span className="line-clamp-4">{text}</span>
+                ) : (
+                  <PlusIcon className="size-4 opacity-60" />
+                )}
+                {text && points > 1 && (
+                  <span className="absolute right-1 top-1 rounded bg-gold/20 px-1 text-[9px] text-gold">
+                    {points}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {errors.challenges && <p className="text-sm text-destructive">{errors.challenges}</p>}
-
-        <Button type="button" variant="outline" size="sm" onClick={addChallenge}>
-          <PlusIcon />
-          Add challenge
-        </Button>
       </div>
+
+      {/* Tile editor dialog */}
+      <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing !== null ? `Tile ${editing + 1}` : "Tile"}</DialogTitle>
+          </DialogHeader>
+          {current && editing !== null && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="tile-text">Challenge</Label>
+                <textarea
+                  id="tile-text"
+                  autoFocus
+                  rows={3}
+                  maxLength={300}
+                  value={current.text}
+                  onChange={(e) => updateChallenge(editing, { text: e.target.value })}
+                  placeholder="e.g. Thank the prof for picking me"
+                  className={cn(
+                    "w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none",
+                    "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                  )}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="tile-points" className="text-sm">
+                  Points
+                </Label>
+                <Input
+                  id="tile-points"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={current.points}
+                  onChange={(e) => updateChallenge(editing, { points: e.target.value })}
+                  className="w-20 text-center"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <DialogClose render={<Button>Done</Button>} />
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2 border-t border-border pt-4">
         {mode === "edit" ? (
           <>
-            <SubmitButton
-              pending={pending}
-              variant={showPublish ? "outline" : "default"}
-              onClick={() => submit(false)}
-            >
+            <SubmitButton pending={pending} variant={showPublish ? "outline" : "default"} onClick={() => submit(false)}>
               <SaveIcon />
               Save changes
             </SubmitButton>
@@ -507,11 +496,7 @@ export function CardEditor({
           </>
         ) : (
           <>
-            <SubmitButton
-              pending={pending}
-              variant="outline"
-              onClick={() => submit(false)}
-            >
+            <SubmitButton pending={pending} variant="outline" onClick={() => submit(false)}>
               <SaveIcon />
               Save draft
             </SubmitButton>
