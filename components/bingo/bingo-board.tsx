@@ -8,6 +8,7 @@ import { freeSpacePosition } from "@/lib/bingo/layout"
 import { linesFor } from "@/lib/bingo/winlines"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BingoGrid, type GridCell } from "@/components/bingo/bingo-grid"
+import { ViewToggle, useViewMode } from "@/components/common/view-toggle"
 
 type Challenge = { id: string; text: string }
 
@@ -43,6 +44,7 @@ export function BingoBoard({
   )
   const [cells, setCells] = useState<GridCell[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [view, setView] = useViewMode("play-board-view", "grid")
 
   const freePos = card.free_space ? freeSpacePosition(card.grid_size) : null
 
@@ -129,6 +131,9 @@ export function BingoBoard({
 
   return (
     <div className="space-y-3">
+      <div className="flex justify-end">
+        <ViewToggle value={view} onChange={setView} size="sm" />
+      </div>
       <BingoGrid
         playerCardId={playerCardId}
         cardId={card.id}
@@ -136,6 +141,7 @@ export function BingoBoard({
         freeSpacePosition={freePos}
         cells={cells}
         onMarkedCountChange={setMarkedCount}
+        view={view}
       />
       <p className="text-center text-sm text-muted-foreground">
         <span className="font-semibold text-foreground">{markedCount}</span> marked

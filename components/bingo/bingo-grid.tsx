@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { CheckIcon } from "lucide-react"
 import { toast } from "sonner"
 import { markCell } from "@/lib/actions/play"
 import { createClient } from "@/lib/supabase/client"
 import { subscribeToBingos, subscribeToPlayerCells } from "@/lib/realtime/subscriptions"
 import { completedLines, linesFor } from "@/lib/bingo/winlines"
+import type { ViewMode } from "@/components/common/view-toggle"
 import { cn } from "@/lib/utils"
 
 export type GridCell = {
@@ -40,6 +42,7 @@ export function BingoGrid({
   freeSpacePosition,
   cells: initialCells,
   onMarkedCountChange,
+  view = "grid",
 }: {
   playerCardId: string
   cardId: string
@@ -47,6 +50,7 @@ export function BingoGrid({
   freeSpacePosition: number | null
   cells: GridCell[]
   onMarkedCountChange?: (count: number) => void
+  view?: ViewMode
 }) {
   const [cells, setCells] = useState<GridCell[]>(initialCells)
   const [, startTransition] = useTransition()
@@ -166,6 +170,48 @@ export function BingoGrid({
         </div>
       )}
 
+      {view === "list" ? (
+        <ul className="space-y-1.5">
+          {cells
+            .filter((cell) => cell.position !== freeSpacePosition)
+            .map((cell) => (
+              <li key={cell.position}>
+                <button
+                  type="button"
+                  onClick={() => toggle(cell)}
+                  aria-pressed={cell.isMarked}
+                  aria-label={cell.text ?? "Challenge"}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                    cell.isMarked
+                      ? "border-primary/40 bg-primary/5"
+                      : "border-border bg-card hover:border-muted-foreground/40"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-5 shrink-0 items-center justify-center rounded-md border",
+                      cell.isMarked
+                        ? "border-marked bg-marked text-marked-foreground"
+                        : "border-tile-border"
+                    )}
+                  >
+                    {cell.isMarked && <CheckIcon className="size-3.5" />}
+                  </span>
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1",
+                      cell.isMarked && "text-muted-foreground line-through"
+                    )}
+                  >
+                    {cell.text}
+                  </span>
+                </button>
+              </li>
+            ))}
+        </ul>
+      ) : (
       <div
         className={cn(
           "grid gap-1.5 sm:gap-2",
@@ -206,6 +252,7 @@ export function BingoGrid({
           )
         })}
       </div>
+      )}
     </div>
   )
 }

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubmitButton } from "@/components/common/submit-button"
+import { ViewToggle, useViewMode } from "@/components/common/view-toggle"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
@@ -105,6 +106,7 @@ export function CardEditor({
   )
   const [editing, setEditing] = useState<number | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [view, setView] = useViewMode("card-editor-view", "grid")
 
   // D6 — free space only valid on odd grids.
   const evenGrid = gridSize % 2 === 0
@@ -376,59 +378,104 @@ export function CardEditor({
         {errors.endsAt && <p className="text-sm text-destructive">{errors.endsAt}</p>}
       </div>
 
-      {/* Challenges — as the bingo board */}
+      {/* Challenges — as the bingo board or a list */}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <Label>The card</Label>
-          <span className={cn("text-xs font-medium", counterOk ? "text-primary" : "text-muted-foreground")}>
-            {filledCount}/{required} tiles filled
-          </span>
+          <div className="flex items-center gap-3">
+            <span className={cn("text-xs font-medium", counterOk ? "text-primary" : "text-muted-foreground")}>
+              {filledCount}/{required} tiles filled
+            </span>
+            <ViewToggle value={view} onChange={setView} size="sm" />
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">Tap a tile to write its challenge.</p>
+        <p className="text-xs text-muted-foreground">
+          {view === "grid"
+            ? "Tap a tile to write its challenge."
+            : "Fill in each challenge and its point value."}
+        </p>
 
-        <div className={cn("grid gap-1.5 sm:gap-2", GRID_COLS[gridSize] ?? "grid-cols-5")}>
-          {tiles.map((tile) => {
-            if (tile.free) {
+        {view === "grid" ? (
+          <div className={cn("grid gap-1.5 sm:gap-2", GRID_COLS[gridSize] ?? "grid-cols-5")}>
+            {tiles.map((tile) => {
+              if (tile.free) {
+                return (
+                  <div
+                    key={tile.pos}
+                    className="flex aspect-square items-center justify-center rounded-xl bg-free text-free-foreground text-lg"
+                    aria-label="Free space"
+                  >
+                    ★
+                  </div>
+                )
+              }
+              const c = challenges[tile.index]
+              const text = c?.text.trim() ?? ""
+              const points = Number(c?.points ?? "1")
               return (
-                <div
+                <button
                   key={tile.pos}
-                  className="flex aspect-square items-center justify-center rounded-xl bg-free text-free-foreground text-lg"
-                  aria-label="Free space"
+                  type="button"
+                  onClick={() => setEditing(tile.index)}
+                  className={cn(
+                    "relative flex aspect-square items-center justify-center rounded-xl p-1.5 text-center text-[11px] font-bold leading-tight break-words transition-all sm:text-xs",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                    text
+                      ? "bg-card border border-tile-border text-foreground hover:border-muted-foreground/50"
+                      : "border-2 border-dashed border-tile-border text-muted-foreground hover:border-muted-foreground/60"
+                  )}
                 >
-                  ★
-                </div>
+                  {text ? (
+                    <span className="line-clamp-4">{text}</span>
+                  ) : (
+                    <PlusIcon className="size-4 opacity-60" />
+                  )}
+                  {text && points > 1 && (
+                    <span className="absolute right-1 top-1 rounded bg-gold/20 px-1 text-[9px] text-gold">
+                      {points}
+                    </span>
+                  )}
+                </button>
               )
-            }
-            const c = challenges[tile.index]
-            const text = c?.text.trim() ?? ""
-            const points = Number(c?.points ?? "1")
-            return (
-              <button
-                key={tile.pos}
-                type="button"
-                onClick={() => setEditing(tile.index)}
-                className={cn(
-                  "relative flex aspect-square items-center justify-center rounded-xl p-1.5 text-center text-[11px] font-bold leading-tight break-words transition-all sm:text-xs",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-                  text
-                    ? "bg-card border border-tile-border text-foreground hover:border-muted-foreground/50"
-                    : "border-2 border-dashed border-tile-border text-muted-foreground hover:border-muted-foreground/60"
-                )}
+            })}
+          </div>
+        ) : (
+          <ol className="space-y-2">
+            {challenges.map((c, index) => (
+              <li
+                key={index}
+                className="flex items-start gap-2 rounded-xl border border-border bg-card px-3 py-2.5"
               >
-                {text ? (
-                  <span className="line-clamp-4">{text}</span>
-                ) : (
-                  <PlusIcon className="size-4 opacity-60" />
-                )}
-                {text && points > 1 && (
-                  <span className="absolute right-1 top-1 rounded bg-gold/20 px-1 text-[9px] text-gold">
-                    {points}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+                <span className="mt-2 grid size-6 shrink-0 place-items-center rounded-md bg-muted text-xs font-medium text-muted-foreground">
+                  {index + 1}
+                </span>
+                <textarea
+                  rows={2}
+                  maxLength={300}
+                  value={c.text}
+                  onChange={(e) => updateChallenge(index, { text: e.target.value })}
+                  placeholder="e.g. Thank the prof for picking me"
+                  className={cn(
+                    "min-w-0 flex-1 resize-none rounded-lg border border-input bg-transparent px-3 py-1.5 text-sm outline-none",
+                    "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                  )}
+                />
+                <div className="flex shrink-0 flex-col items-center gap-1">
+                  <Input
+                    type="number"
+                    min={1}
+                    step={1}
+                    aria-label={`Tile ${index + 1} points`}
+                    value={c.points}
+                    onChange={(e) => updateChallenge(index, { points: e.target.value })}
+                    className="w-16 text-center"
+                  />
+                  <span className="text-[10px] text-muted-foreground">pts</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
 
         {errors.challenges && <p className="text-sm text-destructive">{errors.challenges}</p>}
       </div>

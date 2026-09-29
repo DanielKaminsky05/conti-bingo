@@ -12,6 +12,7 @@ import {
 import { getCard } from "@/lib/queries/cards"
 import { getMyRole, isHost } from "@/lib/queries/membership"
 import { CardEditor, type CardEditorInitial } from "@/components/cards/card-editor"
+import { CardChallengesView } from "@/components/cards/card-challenges-view"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -158,27 +159,11 @@ export default async function CardDetailPage({
       )}
 
       {/* Challenges */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          Challenges ({challenges.length})
-        </h3>
-        <ol className="space-y-2">
-          {challenges.map((c, i) => (
-            <li
-              key={c.id}
-              className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-2.5 text-sm"
-            >
-              <span className="grid size-6 shrink-0 place-items-center rounded-md bg-muted text-xs font-medium text-muted-foreground">
-                {i + 1}
-              </span>
-              <span className="min-w-0 flex-1">{c.text}</span>
-              <Badge variant="outline">
-                {c.points} {c.points === 1 ? "pt" : "pts"}
-              </Badge>
-            </li>
-          ))}
-        </ol>
-      </div>
+      <CardChallengesView
+        challenges={challenges.map((c) => ({ id: c.id, text: c.text, points: c.points }))}
+        gridSize={card.grid_size}
+        freeSpace={card.free_space}
+      />
     </div>
   )
 }

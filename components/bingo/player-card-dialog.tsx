@@ -1,9 +1,12 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { CheckIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { freeSpacePosition } from "@/lib/bingo/layout"
 import { publicStorageUrl } from "@/lib/storage-url"
+import { ViewToggle, useViewMode } from "@/components/common/view-toggle"
+import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Dialog,
@@ -46,6 +49,7 @@ export function PlayerCardDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const [state, setState] = useState<LoadState>({ status: "loading" })
+  const [view, setView] = useViewMode("player-card-view", "grid")
 
   const challengeText = useMemo(() => {
     const map = new Map<string, string>()
@@ -126,7 +130,7 @@ export function PlayerCardDialog({
                     {player.name.slice(0, 1).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <DialogTitle className="truncate">
                     {player.name}
                     {player.isMe && (
@@ -141,6 +145,9 @@ export function PlayerCardDialog({
                       : "Their bingo card"}
                   </DialogDescription>
                 </div>
+                {state.status === "ready" && (
+                  <ViewToggle value={view} onChange={setView} size="sm" />
+                )}
               </div>
             </DialogHeader>
 
@@ -172,13 +179,49 @@ export function PlayerCardDialog({
               </p>
             )}
 
-            {state.status === "ready" && (
-              <ReadOnlyBingoGrid
-                gridSize={card.gridSize}
-                freeSpacePosition={freePos}
-                cells={state.cells}
-              />
-            )}
+            {state.status === "ready" &&
+              (view === "grid" ? (
+                <ReadOnlyBingoGrid
+                  gridSize={card.gridSize}
+                  freeSpacePosition={freePos}
+                  cells={state.cells}
+                />
+              ) : (
+                <ul className="max-h-[60vh] space-y-1.5 overflow-y-auto">
+                  {state.cells
+                    .filter((c) => c.position !== freePos)
+                    .map((c) => (
+                      <li
+                        key={c.position}
+                        className={cn(
+                          "flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm",
+                          c.isMarked
+                            ? "border-primary/40 bg-primary/5"
+                            : "border-border bg-card"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "flex size-5 shrink-0 items-center justify-center rounded-md border",
+                            c.isMarked
+                              ? "border-marked bg-marked text-marked-foreground"
+                              : "border-tile-border"
+                          )}
+                        >
+                          {c.isMarked && <CheckIcon className="size-3.5" />}
+                        </span>
+                        <span
+                          className={cn(
+                            "min-w-0 flex-1",
+                            c.isMarked && "text-muted-foreground line-through"
+                          )}
+                        >
+                          {c.text}
+                        </span>
+                      </li>
+                    ))}
+                </ul>
+              ))}
           </>
         )}
       </DialogContent>
