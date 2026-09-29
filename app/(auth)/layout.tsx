@@ -10,7 +10,7 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
     <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <h1 className="font-heading text-xl font-semibold">Conti-Bingo</h1>
+          <h1 className="font-heading text-xl font-semibold">Contibingo</h1>
         </div>
         {children}
       </div>

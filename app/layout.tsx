@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Conti-Bingo",
+  title: "Contibingo",
   description: "Section participation bingo for Ivey.",
 };
 

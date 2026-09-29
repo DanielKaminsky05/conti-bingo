@@ -38,7 +38,7 @@ export function AppHeader({ profile }: { profile: Tables<"profiles"> }) {
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-4 py-3">
         <Link href="/" className="flex items-center gap-2">
-          <span className="font-heading font-semibold">Conti-Bingo</span>
+          <span className="font-heading font-semibold">Contibingo</span>
         </Link>
         <div className="flex items-center gap-1">
           <Link

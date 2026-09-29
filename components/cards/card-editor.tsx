@@ -265,7 +265,7 @@ export function CardEditor({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={120}
-            placeholder="Week 1 Conti-Bingo"
+            placeholder="Week 1 Contibingo"
             aria-invalid={!!errors.title}
           />
           {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
