@@ -16,7 +16,7 @@ export function GroupNav({ groupId, isHost }: { groupId: string; isHost: boolean
   ]
 
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b">
+    <nav className="no-scrollbar flex gap-1 overflow-x-auto border-b">
       {tabs.map((t) => {
         const active = t.exact ? pathname === t.href : pathname.startsWith(t.href)
         return (
