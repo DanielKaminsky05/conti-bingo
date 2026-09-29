@@ -26,8 +26,10 @@ const CENTER = 12 // (25 − 1) / 2
 
 describe.skipIf(!hasServiceRole)('play + leaderboard (integration)', () => {
   let owner: TestUser
+  let member: TestUser
   let intruder: TestUser
   let groupId: string
+  let joinCode: string
   let cardId: string
   /** challenge ids ordered by sort_index 0..23 */
   let challengeIds: string[]
@@ -35,6 +37,7 @@ describe.skipIf(!hasServiceRole)('play + leaderboard (integration)', () => {
   beforeAll(async () => {
     const a = admin()
     owner = await createTestUser('Bingo Owner')
+    member = await createTestUser('Second Member')
     intruder = await createTestUser('Nosy Intruder')
 
     // Owner creates the group via the SECURITY DEFINER RPC (enrolls owner as
@@ -43,7 +46,14 @@ describe.skipIf(!hasServiceRole)('play + leaderboard (integration)', () => {
       p_name: `Play IT ${crypto.randomUUID()}`,
     })
     if (gErr) throw gErr
-    groupId = (group as { id: string }).id
+    groupId = (group as { id: string; join_code: string }).id
+    joinCode = (group as { id: string; join_code: string }).join_code
+
+    // Second member joins via the code (real `member` membership, RLS applies).
+    const { error: jErr } = await member.client.rpc('join_group', {
+      p_code: joinCode,
+    })
+    if (jErr) throw jErr
 
     // Author an active 5×5 card + 24 challenges with admin (RLS-bypassing setup;
     // card authoring belongs to the Cards bucket).
@@ -83,7 +93,7 @@ describe.skipIf(!hasServiceRole)('play + leaderboard (integration)', () => {
   })
 
   afterAll(async () => {
-    await deleteTestUsers(owner?.id, intruder?.id)
+    await deleteTestUsers(owner?.id, member?.id, intruder?.id)
   })
 
   /**
@@ -91,19 +101,19 @@ describe.skipIf(!hasServiceRole)('play + leaderboard (integration)', () => {
    * one player_cards row + 25 cells, free center pre-marked. Replicates the
    * Server Action's Supabase writes as the authed user (RLS applies).
    */
-  async function materializeOwnerCard(): Promise<string> {
+  async function materializeCardFor(u: TestUser): Promise<string> {
     // Idempotent create of the player_cards row (unique (card_id, user_id)).
-    const existing = await owner.client
+    const existing = await u.client
       .from('player_cards')
       .select('id')
       .eq('card_id', cardId)
-      .eq('user_id', owner.id)
+      .eq('user_id', u.id)
       .maybeSingle()
     if (existing.data) return existing.data.id
 
-    const { data: pc, error } = await owner.client
+    const { data: pc, error } = await u.client
       .from('player_cards')
-      .insert({ card_id: cardId, user_id: owner.id, shuffle_seed: null })
+      .insert({ card_id: cardId, user_id: u.id, shuffle_seed: null })
       .select('id')
       .single()
     if (error) throw error
@@ -115,9 +125,13 @@ describe.skipIf(!hasServiceRole)('play + leaderboard (integration)', () => {
       is_marked: c.isMarked,
       marked_at: c.isMarked ? new Date().toISOString() : null,
     }))
-    const { error: cellErr } = await owner.client.from('player_card_cells').insert(cells)
+    const { error: cellErr } = await u.client.from('player_card_cells').insert(cells)
     if (cellErr) throw cellErr
     return pc.id
+  }
+
+  function materializeOwnerCard(): Promise<string> {
+    return materializeCardFor(owner)
   }
 
   it('materializes a player card with 25 cells and a pre-marked free center; second call does not duplicate', async () => {
@@ -306,5 +320,51 @@ describe.skipIf(!hasServiceRole)('play + leaderboard (integration)', () => {
       .select('user_id')
       .eq('card_id', cardId)
     expect(nonMember.data ?? []).toHaveLength(0)
+  })
+
+  it('two members marking the same challenge both appear in the completions aggregation (migration 10 cross-player read)', async () => {
+    const ownerPc = await materializeOwnerCard()
+    const memberPc = await materializeCardFor(member)
+
+    // Identical layout: position 0 → challengeIds[0]. Both mark it.
+    const targetChallenge = challengeIds[0]
+    for (const [u, pc] of [
+      [owner, ownerPc],
+      [member, memberPc],
+    ] as const) {
+      const { error } = await u.client
+        .from('player_card_cells')
+        .update({ is_marked: true, marked_at: new Date().toISOString() })
+        .eq('player_card_id', pc)
+        .eq('position', 0)
+      expect(error).toBeNull()
+    }
+
+    // Replicate getChallengeCompletions' select AS the authed member (RLS applies).
+    // Migration 10 lets a group member read other players' marked cells.
+    const { data, error } = await member.client
+      .from('player_card_cells')
+      .select(
+        'challenge_id, is_marked, player_cards!inner(card_id, profiles!inner(id, name, avatar_path))'
+      )
+      .eq('is_marked', true)
+      .not('challenge_id', 'is', null)
+      .eq('player_cards.card_id', cardId)
+      .eq('challenge_id', targetChallenge)
+    expect(error).toBeNull()
+
+    const userIds = new Set(
+      (data ?? []).map(
+        (r) =>
+          (
+            r as unknown as {
+              player_cards: { profiles: { id: string } }
+            }
+          ).player_cards.profiles.id
+      )
+    )
+    expect(userIds.has(owner.id)).toBe(true)
+    expect(userIds.has(member.id)).toBe(true)
+    expect(userIds.size).toBe(2)
   })
 })
