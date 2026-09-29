@@ -4,6 +4,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Matches only when running as an installed PWA ("app version"), used to show the
+   bottom icon nav and hide the top tab bar. (iOS supports this from 16.4+.) */
+@custom-variant standalone (@media (display-mode: standalone));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

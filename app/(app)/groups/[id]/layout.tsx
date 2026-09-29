@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { getGroup } from "@/lib/queries/groups"
 import { getMyRole, isHost } from "@/lib/queries/membership"
 import { GroupNav } from "@/components/app/group-nav"
+import { GroupBottomNav } from "@/components/app/group-bottom-nav"
 import { publicStorageUrl } from "@/lib/storage-url"
 import { cn } from "@/lib/utils"
 
@@ -26,7 +27,7 @@ export default async function GroupLayout({
   const background = publicStorageUrl("group-images", group.background_path)
 
   return (
-    <div className="relative space-y-4">
+    <div className="relative space-y-4 standalone:pb-20">
       {background && (
         // Full-bleed backdrop behind ALL group pages. Fixed so it fills the
         // viewport regardless of the centered content column; -z-10 keeps it
@@ -61,7 +62,10 @@ export default async function GroupLayout({
           )}
         </div>
       </header>
-      <GroupNav groupId={id} isHost={isHost(role)} framed={!!background} />
+      {/* Top tabs in the browser; hidden in the installed app (bottom nav instead). */}
+      <div className="standalone:hidden">
+        <GroupNav groupId={id} isHost={isHost(role)} framed={!!background} />
+      </div>
       <div
         className={cn(
           background &&
@@ -70,6 +74,7 @@ export default async function GroupLayout({
       >
         {children}
       </div>
+      <GroupBottomNav groupId={id} isHost={isHost(role)} />
     </div>
   )
 }
