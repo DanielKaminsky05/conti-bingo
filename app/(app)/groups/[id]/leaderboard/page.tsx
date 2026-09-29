@@ -11,12 +11,12 @@ export default async function LeaderboardPage({
 }) {
   const { id } = await params
 
-  let card
-  try {
-    card = await getActiveCard(id)
-  } catch {
-    card = null
-  }
+  // The active card and the viewer's identity are independent — fetch them
+  // together so we pay one round-trip wave, not two serial ones.
+  const [card, user] = await Promise.all([
+    getActiveCard(id).catch(() => null),
+    getCurrentUser(),
+  ])
 
   if (!card) {
     return (
@@ -33,8 +33,6 @@ export default async function LeaderboardPage({
   } catch {
     rows = []
   }
-
-  const user = await getCurrentUser()
 
   return (
     <div className="space-y-4">
