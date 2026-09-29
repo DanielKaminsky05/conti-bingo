@@ -1,13 +1,14 @@
 import Link from "next/link"
 import { getActiveCard } from "@/lib/queries/cards"
-import { getLeaderboard } from "@/lib/queries/leaderboard"
+import {
+  getChallengeCompletions,
+  type ChallengeCompletions,
+} from "@/lib/queries/play"
 import { getMyRole, isHost } from "@/lib/queries/membership"
-import { getCurrentUser } from "@/lib/auth/current-user"
 import { EmptyState } from "@/components/common/empty-state"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { BingoBoard } from "@/components/bingo/bingo-board"
-import { Leaderboard, type LeaderboardRow } from "@/components/bingo/leaderboard"
 
 export default async function GroupPlayPage({
   params,
@@ -49,15 +50,14 @@ export default async function GroupPlayPage({
     )
   }
 
-  // Top-5 leaderboard preview (best-effort — never blocks the board).
-  let previewRows: LeaderboardRow[] = []
+  // Per-challenge completion counts (best-effort — never blocks the board).
+  // Load-time snapshot; live updates are a follow-up.
+  let completions: ChallengeCompletions = {}
   try {
-    previewRows = (await getLeaderboard(card.id)) as unknown as LeaderboardRow[]
+    completions = await getChallengeCompletions(card.id)
   } catch {
-    previewRows = []
+    completions = {}
   }
-
-  const user = await getCurrentUser()
 
   return (
     <div className="space-y-6">
@@ -75,31 +75,7 @@ export default async function GroupPlayPage({
             challenges: card.challenges.map((c) => ({ id: c.id, text: c.text })),
           }}
           groupId={id}
-        />
-      </section>
-
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-base font-semibold">Leaderboard</h2>
-          <Link
-            href={`/groups/${id}/leaderboard`}
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            View all
-          </Link>
-        </div>
-        <Leaderboard
-          rows={previewRows}
-          cardId={card.id}
-          currentUserId={user?.id ?? null}
-          card={{
-            id: card.id,
-            gridSize: card.grid_size,
-            freeSpace: card.free_space,
-            challenges: card.challenges.map((c) => ({ id: c.id, text: c.text })),
-          }}
-          preview
-          previewLimit={5}
+          completions={completions}
         />
       </section>
     </div>

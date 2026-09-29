@@ -9,6 +9,7 @@ import { linesFor } from "@/lib/bingo/winlines"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BingoGrid, type GridCell } from "@/components/bingo/bingo-grid"
 import { ViewToggle, useViewMode } from "@/components/common/view-toggle"
+import type { ChallengeCompletions } from "@/lib/bingo/completions"
 
 type Challenge = { id: string; text: string }
 
@@ -34,10 +35,13 @@ export function BingoBoard({
   card,
   groupId,
   playerCardId: initialPlayerCardId,
+  completions = {},
 }: {
   card: BingoBoardCard
   groupId: string
   playerCardId?: string
+  /** Per-challenge completion counts + who (load-time snapshot). */
+  completions?: ChallengeCompletions
 }) {
   const [playerCardId, setPlayerCardId] = useState<string | null>(
     initialPlayerCardId ?? null
@@ -130,7 +134,7 @@ export function BingoBoard({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="mx-auto w-full max-w-md space-y-3">
       <div className="flex justify-end">
         <ViewToggle value={view} onChange={setView} size="sm" />
       </div>
@@ -142,6 +146,7 @@ export function BingoBoard({
         cells={cells}
         onMarkedCountChange={setMarkedCount}
         view={view}
+        completions={completions}
       />
       <p className="text-center text-sm text-muted-foreground">
         <span className="font-semibold text-foreground">{markedCount}</span> marked
@@ -166,7 +171,7 @@ function BoardSkeleton({ gridSize }: { gridSize: number }) {
     6: "grid-cols-6",
   }
   return (
-    <div className="space-y-3">
+    <div className="mx-auto w-full max-w-md space-y-3">
       <div className={`grid gap-1.5 sm:gap-2 ${cols[gridSize] ?? "grid-cols-5"}`}>
         {Array.from({ length: gridSize * gridSize }).map((_, i) => (
           <Skeleton key={i} className="aspect-square rounded-xl" />

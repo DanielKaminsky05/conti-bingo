@@ -8,6 +8,17 @@ import { createClient } from "@/lib/supabase/client"
 import { subscribeToBingos, subscribeToPlayerCells } from "@/lib/realtime/subscriptions"
 import { completedLines, linesFor } from "@/lib/bingo/winlines"
 import type { ViewMode } from "@/components/common/view-toggle"
+import type { ChallengeCompletions } from "@/lib/bingo/completions"
+import { publicStorageUrl } from "@/lib/storage-url"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 export type GridCell = {
@@ -43,6 +54,7 @@ export function BingoGrid({
   cells: initialCells,
   onMarkedCountChange,
   view = "grid",
+  completions = {},
 }: {
   playerCardId: string
   cardId: string
@@ -51,10 +63,14 @@ export function BingoGrid({
   cells: GridCell[]
   onMarkedCountChange?: (count: number) => void
   view?: ViewMode
+  /** Per-challenge completion counts + who (load-time snapshot). */
+  completions?: ChallengeCompletions
 }) {
   const [cells, setCells] = useState<GridCell[]>(initialCells)
   const [, startTransition] = useTransition()
   const [burst, setBurst] = useState(false)
+  // The challenge whose "who completed it" dialog is open (null = closed).
+  const [openChallengeId, setOpenChallengeId] = useState<string | null>(null)
 
   // Keep local state in sync if the parent re-hydrates cells.
   useEffect(() => {
@@ -221,6 +237,10 @@ export function BingoGrid({
         {cells.map((cell) => {
           const isFree = cell.position === freeSpacePosition
           const inLine = glowPositions.has(cell.position)
+          const completion = cell.challengeId
+            ? completions[cell.challengeId]
+            : undefined
+          const count = completion?.count ?? 0
 
           return (
             <button
@@ -248,11 +268,116 @@ export function BingoGrid({
               ) : (
                 <span className="line-clamp-4">{cell.text}</span>
               )}
+
+              {/* People-completed badge: tap opens the who-list; hover shows the count.
+                  Hidden on free space and when nobody has completed the square. */}
+              {!isFree && cell.challengeId && count > 0 && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`${count} ${
+                          count === 1 ? "player" : "players"
+                        } completed this — view who`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOpenChallengeId(cell.challengeId)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setOpenChallengeId(cell.challengeId)
+                          }
+                        }}
+                      />
+                    }
+                    className={cn(
+                      "absolute -top-1.5 -right-1.5 z-10 inline-flex min-w-4 cursor-pointer items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none tabular-nums shadow-sm ring-1 transition-colors",
+                      cell.isMarked
+                        ? "bg-background text-foreground ring-marked/40 hover:bg-muted"
+                        : "bg-primary text-primary-foreground ring-primary/40 hover:bg-primary/90"
+                    )}
+                  >
+                    {count}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {count} {count === 1 ? "player" : "players"} completed this
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </button>
           )
         })}
       </div>
       )}
+
+      <CompletionsDialog
+        completion={openChallengeId ? completions[openChallengeId] : undefined}
+        challengeText={
+          openChallengeId
+            ? cells.find((c) => c.challengeId === openChallengeId)?.text ?? null
+            : null
+        }
+        open={openChallengeId !== null}
+        onOpenChange={(next) => {
+          if (!next) setOpenChallengeId(null)
+        }}
+      />
     </div>
+  )
+}
+
+/** Dialog listing the players (avatar + name) who have marked a challenge. */
+function CompletionsDialog({
+  completion,
+  challengeText,
+  open,
+  onOpenChange,
+}: {
+  completion: ChallengeCompletions[string] | undefined
+  challengeText: string | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const users = completion?.users ?? []
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {users.length} {users.length === 1 ? "player" : "players"} completed
+            this
+          </DialogTitle>
+          {challengeText && (
+            <DialogDescription>{challengeText}</DialogDescription>
+          )}
+        </DialogHeader>
+        <ul className="max-h-72 space-y-1.5 overflow-y-auto">
+          {users.map((u) => {
+            const avatarUrl = publicStorageUrl("avatars", u.avatarPath)
+            return (
+              <li
+                key={u.id}
+                className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2"
+              >
+                <Avatar size="sm">
+                  {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
+                  <AvatarFallback>
+                    {u.name.slice(0, 1).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {u.name}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      </DialogContent>
+    </Dialog>
   )
 }
