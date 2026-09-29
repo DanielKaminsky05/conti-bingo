@@ -33,6 +33,9 @@ async function insertDraftCard(
   userId: string,
   input: CreateCardInput
 ): Promise<string> {
+  // Co-op cards share ONE board: they're always an identical layout won by
+  // blackout, regardless of what the (hidden) pickers held.
+  const coop = input.gameMode === 'coop'
   const { data: card, error: cardError } = await supabase
     .from('cards')
     .insert({
@@ -40,9 +43,10 @@ async function insertDraftCard(
       title: input.title,
       description: input.description ?? null,
       grid_size: input.gridSize,
-      layout_mode: input.layoutMode,
+      layout_mode: coop ? 'identical' : input.layoutMode,
       free_space: input.freeSpace,
-      win_condition: input.winCondition,
+      win_condition: coop ? 'blackout' : input.winCondition,
+      game_mode: input.gameMode,
       starts_at: input.startsAt ?? null,
       ends_at: input.endsAt ?? null,
       status: 'draft',
@@ -128,16 +132,23 @@ export async function updateCard(input: unknown): Promise<ActionResult<CardRow>>
     const structuralChange =
       (fields.gridSize !== undefined && fields.gridSize !== current.grid_size) ||
       (fields.layoutMode !== undefined && fields.layoutMode !== current.layout_mode) ||
-      (fields.freeSpace !== undefined && fields.freeSpace !== current.free_space)
+      (fields.freeSpace !== undefined && fields.freeSpace !== current.free_space) ||
+      (fields.gameMode !== undefined && fields.gameMode !== current.game_mode)
+
+    // The card's effective mode after this update decides which materialization
+    // to rebuild (co-op has one shared board; individual has per-player cards).
+    const coop = (fields.gameMode ?? current.game_mode) === 'coop'
 
     // Apply the card-field patch (structural fields included).
     const patch: Database['public']['Tables']['cards']['Update'] = {}
     if (fields.title !== undefined) patch.title = fields.title
     if (fields.description !== undefined) patch.description = fields.description
     if (fields.gridSize !== undefined) patch.grid_size = fields.gridSize
-    if (fields.layoutMode !== undefined) patch.layout_mode = fields.layoutMode
+    if (fields.gameMode !== undefined) patch.game_mode = fields.gameMode
+    // Co-op forces identical layout + blackout win (single shared board).
+    if (fields.layoutMode !== undefined) patch.layout_mode = coop ? 'identical' : fields.layoutMode
     if (fields.freeSpace !== undefined) patch.free_space = fields.freeSpace
-    if (fields.winCondition !== undefined) patch.win_condition = fields.winCondition
+    if (fields.winCondition !== undefined) patch.win_condition = coop ? 'blackout' : fields.winCondition
     if (fields.startsAt !== undefined) patch.starts_at = fields.startsAt
     if (fields.endsAt !== undefined) patch.ends_at = fields.endsAt
 
@@ -198,19 +209,26 @@ export async function updateCard(input: unknown): Promise<ActionResult<CardRow>>
             changedTextIds.push(existing[i].id)
           }
         }
-        // Un-mark each edited square across all players (revokes dependent
-        // bingos via the trigger), then recompute points for still-marked cells.
-        for (const id of changedTextIds) {
-          const { error: rErr } = await supabase.rpc('reset_edited_challenge', { p_challenge_id: id })
-          if (rErr) throw new ActionError('error', rErr.message)
+        // Individual mode: un-mark each edited square across all players
+        // (revokes dependent bingos via the trigger), then recompute points.
+        // Co-op cells reference the same stable challenge_id, so an in-place text
+        // edit leaves the shared board's marks intact — nothing to reset.
+        if (!coop) {
+          for (const id of changedTextIds) {
+            const { error: rErr } = await supabase.rpc('reset_edited_challenge', { p_challenge_id: id })
+            if (rErr) throw new ActionError('error', rErr.message)
+          }
+          const { error: rcErr } = await supabase.rpc('recount_card', { p_card_id: cardId })
+          if (rcErr) throw new ActionError('error', rcErr.message)
         }
-        const { error: rcErr } = await supabase.rpc('recount_card', { p_card_id: cardId })
-        if (rcErr) throw new ActionError('error', rcErr.message)
       }
     }
 
     if (needsRebuild) {
-      const { error: rbErr } = await supabase.rpc('rebuild_player_cards', { p_card_id: cardId })
+      // Rebuild the mode-appropriate materialization: the shared co-op board, or
+      // every player's individual card.
+      const rpc = coop ? 'rebuild_coop_board' : 'rebuild_player_cards'
+      const { error: rbErr } = await supabase.rpc(rpc, { p_card_id: cardId })
       if (rbErr) throw new ActionError('error', rbErr.message)
     }
 

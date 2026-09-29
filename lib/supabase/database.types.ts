@@ -73,6 +73,7 @@ export type Database = {
           description: string | null
           ends_at: string | null
           free_space: boolean
+          game_mode: Database["public"]["Enums"]["card_game_mode"]
           grid_size: number
           group_id: string
           id: string
@@ -89,6 +90,7 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           free_space?: boolean
+          game_mode?: Database["public"]["Enums"]["card_game_mode"]
           grid_size?: number
           group_id: string
           id?: string
@@ -105,6 +107,7 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           free_space?: boolean
+          game_mode?: Database["public"]["Enums"]["card_game_mode"]
           grid_size?: number
           group_id?: string
           id?: string
@@ -169,6 +172,97 @@ export type Database = {
             columns: ["card_id"]
             isOneToOne: false
             referencedRelation: "cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coop_boards: {
+        Row: {
+          card_id: string
+          completed_at: string | null
+          created_at: string
+          group_id: string
+          id: string
+        }
+        Insert: {
+          card_id: string
+          completed_at?: string | null
+          created_at?: string
+          group_id: string
+          id?: string
+        }
+        Update: {
+          card_id?: string
+          completed_at?: string | null
+          created_at?: string
+          group_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coop_boards_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: true
+            referencedRelation: "cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_boards_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coop_board_cells: {
+        Row: {
+          board_id: string
+          challenge_id: string | null
+          id: string
+          is_marked: boolean
+          marked_at: string | null
+          marked_by: string | null
+          position: number
+        }
+        Insert: {
+          board_id: string
+          challenge_id?: string | null
+          id?: string
+          is_marked?: boolean
+          marked_at?: string | null
+          marked_by?: string | null
+          position: number
+        }
+        Update: {
+          board_id?: string
+          challenge_id?: string | null
+          id?: string
+          is_marked?: boolean
+          marked_at?: string | null
+          marked_by?: string | null
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coop_board_cells_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "coop_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_board_cells_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coop_board_cells_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -608,6 +702,7 @@ export type Database = {
           description: string | null
           ends_at: string | null
           free_space: boolean
+          game_mode: Database["public"]["Enums"]["card_game_mode"]
           grid_size: number
           group_id: string
           id: string
@@ -619,6 +714,9 @@ export type Database = {
           win_condition: Database["public"]["Enums"]["card_win_condition"]
         }
       }
+      check_coop_blackout: { Args: { p_board_id: string }; Returns: undefined }
+      get_or_create_coop_board: { Args: { p_card_id: string }; Returns: string }
+      rebuild_coop_board: { Args: { p_card_id: string }; Returns: undefined }
       rebuild_player_cards: { Args: { p_card_id: string }; Returns: undefined }
       recount_card: { Args: { p_card_id: string }; Returns: undefined }
       reset_edited_challenge: { Args: { p_challenge_id: string }; Returns: undefined }
@@ -629,6 +727,7 @@ export type Database = {
     }
     Enums: {
       bingo_type: "line" | "blackout"
+      card_game_mode: "individual" | "coop"
       card_layout_mode: "shuffled" | "identical"
       card_status: "draft" | "active" | "archived"
       card_win_condition: "line" | "blackout"
@@ -770,6 +869,7 @@ export const Constants = {
   public: {
     Enums: {
       bingo_type: ["line", "blackout"],
+      card_game_mode: ["individual", "coop"],
       card_layout_mode: ["shuffled", "identical"],
       card_status: ["draft", "active", "archived"],
       card_win_condition: ["line", "blackout"],

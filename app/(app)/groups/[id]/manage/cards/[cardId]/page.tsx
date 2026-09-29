@@ -37,6 +37,7 @@ export default async function ManageCardEditPage({
     layoutMode: card.layout_mode,
     freeSpace: card.free_space,
     winCondition: card.win_condition,
+    gameMode: card.game_mode,
     startsAt: card.starts_at,
     endsAt: card.ends_at,
     challenges: challenges.map((c) => ({

@@ -125,11 +125,13 @@ auth.users → profiles (username, name, avatar_path)
   └ groups (host_id, join_code, join_locked, status)
       ├ group_members (role: owner|admin|member; one owner per group via partial unique)
       ├ invites (email/token, role, expiry, status)
-      └ cards (draft → one active → archived; grid_size 4/5/6, layout_mode, free_space, win_condition, schedule)
-          ├ challenges (text, points, sort_index)
-          └ player_cards (shuffle_seed; denormalized marks_count/points_total/bingo_count)
-              ├ player_card_cells (position, challenge_id nullable=free, is_marked)
-              └ bingos (line|blackout, line_key; REVOCABLE)
+      └ cards (draft → one active → archived; grid_size 4/5/6, layout_mode, free_space, win_condition, game_mode individual|coop, schedule)
+          ├ challenges (text nullable, image_path nullable [≥1 of the two required], points, sort_index)
+          ├ player_cards (INDIVIDUAL mode; shuffle_seed; denormalized marks_count/points_total/bingo_count)
+          │   ├ player_card_cells (position, challenge_id nullable=free, is_marked)
+          │   └ bingos (line|blackout, line_key; REVOCABLE)
+          └ coop_boards (COOP mode; ONE shared board per card; completed_at REVOCABLE)
+              └ coop_board_cells (position, challenge_id nullable=free, is_marked, marked_by = contributor)
   └ notifications (recipient)
 Storage: avatars/{user_id}/… · group-images/{group_id}/…  (RLS-guarded)
 ```
@@ -153,7 +155,7 @@ and `SUPABASE_SERVICE_ROLE_KEY` (integration tests only — never commit the rea
 
 ## Key decisions (`docs/decisions.md`)
 
-- **D1** Leaderboard = `security_invoker` view. **D2** Reads via Data API (RLS) + Realtime; writes only via Server Actions. **D3** Email + password with email confirmation, **no 2FA**. **D4** Bingos are **revocable** (trigger inserts and deletes). **D5** Cards editable anytime — a single challenge-text edit un-completes only that square across players (trigger revokes dependent bingos); grid/layout changes rebuild player cards. **D6** Free space only on odd grids (5×5). **D7** Enriched model — roles/co-hosts, invites, notifications, drafts/scheduling/weighted points, avatars/group images. Activity feed + reactions deferred.
+- **D1** Leaderboard = `security_invoker` view. **D2** Reads via Data API (RLS) + Realtime; writes only via Server Actions. **D3** Email + password with email confirmation, **no 2FA**. **D4** Bingos are **revocable** (trigger inserts and deletes). **D5** Cards editable anytime — a single challenge-text edit un-completes only that square across players (trigger revokes dependent bingos); grid/layout changes rebuild player cards. **D6** Free space only on odd grids (5×5). **D7** Enriched model — roles/co-hosts, invites, notifications, drafts/scheduling/weighted points, avatars/group images. Activity feed + reactions deferred. **D8** Per-square images (nullable `challenges.text`/`image_path`) + **group co-op mode** (`cards.game_mode`): one shared `coop_boards`/`coop_board_cells` board filled by blackout, `marked_by` = griefing-lock + contributions leaderboard; kept separate from the individual-play tables.
 
 ## Documentation map (`docs/` — the authoritative spec)
 
@@ -167,4 +169,4 @@ and `SUPABASE_SERVICE_ROLE_KEY` (integration tests only — never commit the rea
 | `frontend-conventions.md` | Component APIs (Base UI), action/query signatures, realtime helpers |
 | `frontend-plan.md` | Route map, per-page spec, reusable components, design system |
 | `test-conventions.md` / `test-plan.md` | How/what to test across unit/integration/e2e |
-| `decisions.md` | Decision log D1–D7 with rationale |
+| `decisions.md` | Decision log D1–D8 with rationale |

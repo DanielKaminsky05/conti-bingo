@@ -33,6 +33,7 @@ import type { Enums } from "@/lib/supabase/database.types"
 type GridSize = 4 | 5 | 6
 type LayoutMode = Enums<"card_layout_mode">
 type WinCondition = Enums<"card_win_condition">
+type GameMode = Enums<"card_game_mode">
 
 type ChallengeDraft = { text: string; points: string; imagePath?: string }
 
@@ -44,6 +45,7 @@ export type CardEditorInitial = {
   layoutMode: LayoutMode
   freeSpace: boolean
   winCondition: WinCondition
+  gameMode: GameMode
   startsAt: string | null
   endsAt: string | null
   challenges: { text: string | null; points: number; imagePath?: string | null }[]
@@ -110,6 +112,8 @@ export function CardEditor({
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(initial?.layoutMode ?? "shuffled")
   const [freeSpace, setFreeSpace] = useState<boolean>(initial?.freeSpace ?? false)
   const [winCondition, setWinCondition] = useState<WinCondition>(initial?.winCondition ?? "line")
+  const [gameMode, setGameMode] = useState<GameMode>(initial?.gameMode ?? "individual")
+  const coop = gameMode === "coop"
   const [startsAt, setStartsAt] = useState<string>(isoToLocalInput(initial?.startsAt ?? null))
   const [endsAt, setEndsAt] = useState<string>(isoToLocalInput(initial?.endsAt ?? null))
   const [challenges, setChallenges] = useState<ChallengeDraft[]>(
@@ -226,9 +230,11 @@ export function CardEditor({
       title: title.trim(),
       description: description.trim() || undefined,
       gridSize,
-      layoutMode,
+      // Co-op is always an identical layout won by blackout (single shared board).
+      layoutMode: coop ? ("identical" as LayoutMode) : layoutMode,
       freeSpace: effectiveFreeSpace,
-      winCondition,
+      winCondition: coop ? ("blackout" as WinCondition) : winCondition,
+      gameMode,
       startsAt: localInputToIso(startsAt),
       endsAt: localInputToIso(endsAt),
       challenges: payloadChallenges,
@@ -334,6 +340,22 @@ export function CardEditor({
         </div>
       </div>
 
+      {/* Game mode */}
+      <div className="space-y-2">
+        <Label>Game mode</Label>
+        <Tabs value={gameMode} onValueChange={(v) => setGameMode(v as GameMode)}>
+          <TabsList>
+            <TabsTrigger value="individual">Individual</TabsTrigger>
+            <TabsTrigger value="coop">Group co-op</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <p className="text-xs text-muted-foreground">
+          {coop
+            ? "The whole group shares ONE board and fills every square together (blackout). Anyone can mark a square; only the person who marked it can unmark it."
+            : "Every player gets their own card and competes on the leaderboard."}
+        </p>
+      </div>
+
       {/* Grid size */}
       <div className="space-y-2">
         <Label>Grid size</Label>
@@ -348,21 +370,23 @@ export function CardEditor({
         </Tabs>
       </div>
 
-      {/* Layout mode */}
-      <div className="space-y-2">
-        <Label>Layout</Label>
-        <Tabs value={layoutMode} onValueChange={(v) => setLayoutMode(v as LayoutMode)}>
-          <TabsList>
-            <TabsTrigger value="shuffled">Shuffled</TabsTrigger>
-            <TabsTrigger value="identical">Identical</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <p className="text-xs text-muted-foreground">
-          {layoutMode === "shuffled"
-            ? "Every player gets challenges in a different order."
-            : "Every player gets the same board layout."}
-        </p>
-      </div>
+      {/* Layout mode — n/a for co-op (one shared board). */}
+      {!coop && (
+        <div className="space-y-2">
+          <Label>Layout</Label>
+          <Tabs value={layoutMode} onValueChange={(v) => setLayoutMode(v as LayoutMode)}>
+            <TabsList>
+              <TabsTrigger value="shuffled">Shuffled</TabsTrigger>
+              <TabsTrigger value="identical">Identical</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <p className="text-xs text-muted-foreground">
+            {layoutMode === "shuffled"
+              ? "Every player gets challenges in a different order."
+              : "Every player gets the same board layout."}
+          </p>
+        </div>
+      )}
 
       {/* Free space */}
       <div className="space-y-2">
@@ -386,21 +410,23 @@ export function CardEditor({
         </div>
       </div>
 
-      {/* Win condition */}
-      <div className="space-y-2">
-        <Label>Win condition</Label>
-        <Tabs value={winCondition} onValueChange={(v) => setWinCondition(v as WinCondition)}>
-          <TabsList>
-            <TabsTrigger value="line">Line</TabsTrigger>
-            <TabsTrigger value="blackout">Blackout</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <p className="text-xs text-muted-foreground">
-          {winCondition === "line"
-            ? "Win by completing any full row, column, or diagonal."
-            : "Win by marking every tile on the card."}
-        </p>
-      </div>
+      {/* Win condition — n/a for co-op (always blackout). */}
+      {!coop && (
+        <div className="space-y-2">
+          <Label>Win condition</Label>
+          <Tabs value={winCondition} onValueChange={(v) => setWinCondition(v as WinCondition)}>
+            <TabsList>
+              <TabsTrigger value="line">Line</TabsTrigger>
+              <TabsTrigger value="blackout">Blackout</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <p className="text-xs text-muted-foreground">
+            {winCondition === "line"
+              ? "Win by completing any full row, column, or diagonal."
+              : "Win by marking every tile on the card."}
+          </p>
+        </div>
+      )}
 
       {/* Schedule */}
       <div className="space-y-2">

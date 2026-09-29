@@ -1,8 +1,10 @@
 import { getActiveCard } from "@/lib/queries/cards"
 import { getLeaderboard } from "@/lib/queries/leaderboard"
+import { getCoopProgress, getCoopStandings } from "@/lib/queries/coop"
 import { getCurrentUser } from "@/lib/auth/current-user"
 import { EmptyState } from "@/components/common/empty-state"
 import { Leaderboard, type LeaderboardRow } from "@/components/bingo/leaderboard"
+import { CoopStandings } from "@/components/bingo/coop-standings"
 
 export default async function LeaderboardPage({
   params,
@@ -24,6 +26,30 @@ export default async function LeaderboardPage({
         title="No leaderboard yet"
         description="Standings appear once a host starts an active card."
       />
+    )
+  }
+
+  // Co-op mode ranks individual contributions to the shared board.
+  if (card.game_mode === "coop") {
+    const [progress, standings] = await Promise.all([
+      getCoopProgress(card.id).catch(() => null),
+      getCoopStandings(card.id).catch(() => []),
+    ])
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="font-heading text-lg font-semibold">Contributions</h2>
+          <p className="text-sm text-muted-foreground">{card.title}</p>
+        </div>
+        <CoopStandings
+          rows={standings}
+          boardId={progress?.boardId ?? null}
+          total={progress?.total ?? 0}
+          marked={progress?.marked ?? 0}
+          completed={!!progress?.completedAt}
+          currentUserId={user?.id ?? null}
+        />
+      </div>
     )
   }
 

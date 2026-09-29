@@ -1,10 +1,11 @@
 import Link from "next/link"
-import { Grid3x3Icon, ListChecksIcon } from "lucide-react"
+import { Grid3x3Icon, ListChecksIcon, UsersIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { Enums } from "@/lib/supabase/database.types"
 
 type CardStatus = Enums<"card_status">
+type GameMode = Enums<"card_game_mode">
 
 const statusVariant: Record<CardStatus, "default" | "secondary" | "outline"> = {
   active: "default",
@@ -30,6 +31,7 @@ export function CardListItem({
     title: string
     status: CardStatus
     grid_size: number
+    game_mode?: GameMode
   }
   challengeCount?: number
   /** Link target; defaults to the read-only card view. */
@@ -47,6 +49,12 @@ export function CardListItem({
         <div className="flex items-center gap-2">
           <h3 className="truncate font-heading text-base font-medium">{card.title}</h3>
           <Badge variant={statusVariant[card.status]}>{statusLabel[card.status]}</Badge>
+          {card.game_mode === "coop" && (
+            <Badge variant="outline" className="gap-1">
+              <UsersIcon className="size-3" />
+              Co-op
+            </Badge>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">

@@ -149,6 +149,36 @@ bare prototype.
 indexes). Follow-on updates needed in `api-endpoints.md` (invite/notification/role
 endpoints, avatar upload) and `test-plan.md` (coverage for the above).
 
+## D8 — Square images + group co-op mode (migrations 13–14)
+
+**Square images.** A challenge may carry an optional `image_path` (public
+`group-images` bucket, `{groupId}/challenges/...`; migration-06 storage RLS
+already governs it). `challenges.text` becomes nullable with a
+`text is not null OR image_path is not null` check, so a square can be text-only,
+image-only, or text-over-image (rendered with a legibility scrim).
+
+**Group co-op ("group bingo").** A card is authored as `game_mode` `individual`
+(default) or `coop`. A co-op card is always an *identical* layout won by
+*blackout*: the whole group shares ONE board (`coop_boards`, one per card) whose
+squares (`coop_board_cells`) any member may mark. `marked_by` records who claimed
+each square — this is both griefing protection (RLS: you may mark an unclaimed
+cell, but only the marker may unmark their own) and the source of a
+**contributions leaderboard** (rank by squares → points → earliest mark). Blackout
+is detected by a trigger that sets/clears `coop_boards.completed_at` (revocable,
+per D4). The board is created + seeded lazily and idempotently by the
+`get_or_create_coop_board` SECURITY DEFINER RPC; structural card edits call
+`rebuild_coop_board` (analogous to `rebuild_player_cards`, D5).
+
+**Why:** Deliberately kept SEPARATE from the individual-play tables so
+`player_cards` / `player_card_cells` / `check_bingo` / the `leaderboard` view are
+untouched. In-place challenge-text edits keep `challenge_id`, so co-op marks
+persist across text edits (only structural changes rebuild the board).
+
+**Affects:** `data-model.md` (enum `card_game_mode`, tables `coop_boards`,
+`coop_board_cells`, `challenges.image_path`), `api-endpoints.md`
+(`uploadChallengeImage`, `getOrCreateCoopBoard`, `markCoopCell`,
+`getCoopStandings`/`getCoopProgress`, coop realtime), and the card editor.
+
 ## Still open (minor, non-contract)
 - Exact `join_code` format/length. Proposed default: **6 chars, uppercase A–Z + 2–9**
   (excluding ambiguous `0/O/1/I/L`), retry on collision.

@@ -33,6 +33,7 @@ export type ChallengeInput = z.infer<typeof challengeInputSchema>
 const gridSizeSchema = z.union([z.literal(4), z.literal(5), z.literal(6)])
 const layoutModeSchema = z.enum(['shuffled', 'identical'])
 const winConditionSchema = z.enum(['line', 'blackout'])
+const gameModeSchema = z.enum(['individual', 'coop'])
 
 /**
  * Shared refinements applied to any object carrying the structural card fields.
@@ -94,6 +95,7 @@ export const createCardSchema = z
     layoutMode: layoutModeSchema,
     freeSpace: z.boolean(),
     winCondition: winConditionSchema.default('line'),
+    gameMode: gameModeSchema.default('individual'),
     startsAt: z.string().datetime({ message: 'Start time must be a valid date-time.' }).optional(),
     endsAt: z.string().datetime({ message: 'End time must be a valid date-time.' }).optional(),
     challenges: z.array(challengeInputSchema).min(1, 'Add at least one challenge.'),
@@ -116,6 +118,7 @@ export const updateCardSchema = z
     layoutMode: layoutModeSchema.optional(),
     freeSpace: z.boolean().optional(),
     winCondition: winConditionSchema.optional(),
+    gameMode: gameModeSchema.optional(),
     startsAt: z.string().datetime({ message: 'Start time must be a valid date-time.' }).nullable().optional(),
     endsAt: z.string().datetime({ message: 'End time must be a valid date-time.' }).nullable().optional(),
     challenges: z.array(challengeInputSchema).optional(),

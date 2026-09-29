@@ -5,10 +5,12 @@ import {
   type ChallengeCompletions,
 } from "@/lib/queries/play"
 import { getMyRole, isHost } from "@/lib/queries/membership"
+import { getCurrentUser } from "@/lib/auth/current-user"
 import { EmptyState } from "@/components/common/empty-state"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { BingoBoard } from "@/components/bingo/bingo-board"
+import { CoopBoard } from "@/components/bingo/coop-board"
 
 export default async function GroupPlayPage({
   params,
@@ -50,6 +52,36 @@ export default async function GroupPlayPage({
     )
   }
 
+  const challenges = card.challenges.map((c) => ({
+    id: c.id,
+    text: c.text,
+    imagePath: c.image_path,
+  }))
+
+  // Co-op: one shared board the whole group fills together (blackout).
+  if (card.game_mode === "coop") {
+    const user = await getCurrentUser()
+    return (
+      <div className="space-y-6">
+        <section>
+          <h2 className="mb-1 font-heading text-lg font-semibold">{card.title}</h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            {card.description ?? "Fill every square together — it's a group effort."}
+          </p>
+          <CoopBoard
+            card={{
+              id: card.id,
+              grid_size: card.grid_size,
+              free_space: card.free_space,
+              challenges,
+            }}
+            currentUserId={user?.id ?? null}
+          />
+        </section>
+      </div>
+    )
+  }
+
   // Per-challenge completion counts (best-effort — never blocks the board).
   // Load-time snapshot; live updates are a follow-up.
   let completions: ChallengeCompletions = {}
@@ -72,11 +104,7 @@ export default async function GroupPlayPage({
             grid_size: card.grid_size,
             free_space: card.free_space,
             layout_mode: card.layout_mode,
-            challenges: card.challenges.map((c) => ({
-              id: c.id,
-              text: c.text,
-              imagePath: c.image_path,
-            })),
+            challenges,
           }}
           groupId={id}
           completions={completions}
