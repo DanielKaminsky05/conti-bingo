@@ -32,10 +32,10 @@ export default async function GroupLayout({
         // viewport regardless of the centered content column; -z-10 keeps it
         // behind the app content. A scrim keeps text/tiles legible in both
         // light and dark mode.
-        <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+        <div aria-hidden className="pointer-events-none fixed inset-x-0 -top-12 -bottom-12 -z-10 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={background} alt="" className="size-full object-cover" />
-          <div className="absolute inset-0 bg-background/70 dark:bg-background/75" />
+          <div className="absolute inset-0 bg-background/30 dark:bg-background/50" />
         </div>
       )}
 
