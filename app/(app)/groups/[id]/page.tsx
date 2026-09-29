@@ -60,7 +60,7 @@ export default async function GroupPlayPage({
 
   // Co-op: one shared board the whole group fills together (blackout).
   if (card.game_mode === "coop") {
-    const user = await getCurrentUser()
+    const [user, role] = await Promise.all([getCurrentUser(), getMyRole(id)])
     return (
       <div className="space-y-6">
         <section>
@@ -76,6 +76,7 @@ export default async function GroupPlayPage({
               challenges,
             }}
             currentUserId={user?.id ?? null}
+            canMark={isHost(role)}
           />
         </section>
       </div>

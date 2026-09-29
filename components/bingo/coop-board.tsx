@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
-import { CheckIcon, LockIcon } from "lucide-react"
+import { CheckIcon } from "lucide-react"
 import { toast } from "sonner"
 import { getOrCreateCoopBoard, markCoopCell } from "@/lib/actions/coop"
 import { createClient } from "@/lib/supabase/client"
@@ -43,9 +43,12 @@ const GRID_COLS: Record<number, string> = {
 export function CoopBoard({
   card,
   currentUserId,
+  canMark,
 }: {
   card: CoopBoardCard
   currentUserId: string | null
+  /** Only group hosts (owner/admin) may mark/unmark; members watch live. */
+  canMark: boolean
 }) {
   const [boardId, setBoardId] = useState<string | null>(null)
   const [cells, setCells] = useState<CoopCell[] | null>(null)
@@ -173,13 +176,8 @@ export function CoopBoard({
   function toggle(cell: CoopCell) {
     if (!boardId) return
     if (cell.position === freePos) return
-    const mine = cell.markedBy === currentUserId
-
-    // Can't touch a square someone else claimed.
-    if (cell.isMarked && !mine) {
-      toast.info(`${cell.markerName ?? "Someone"} already got this one.`)
-      return
-    }
+    // Only hosts may mark/unmark; members just watch.
+    if (!canMark) return
 
     const next = !cell.isMarked
     setCells((prev) =>
@@ -231,16 +229,16 @@ export function CoopBoard({
       <div className={cn("grid gap-1.5 sm:gap-2", GRID_COLS[card.grid_size] ?? "grid-cols-5")}>
         {cells.map((cell) => {
           const isFree = cell.position === freePos
-          const mine = cell.markedBy === currentUserId
-          const lockedByOther = cell.isMarked && !mine
           const avatarUrl = publicStorageUrl("avatars", cell.markerAvatar)
+          // Members can't interact; hosts can toggle any square.
+          const interactive = canMark && !isFree
 
           return (
             <button
               key={cell.position}
               type="button"
               onClick={() => toggle(cell)}
-              disabled={isFree}
+              disabled={!interactive}
               aria-pressed={cell.isMarked}
               aria-label={isFree ? "Free space" : cell.text ?? "Square"}
               className={cn(
@@ -250,8 +248,9 @@ export function CoopBoard({
                   ? "bg-free text-free-foreground cursor-default"
                   : cell.isMarked
                     ? "bg-marked text-marked-foreground shadow-sm"
-                    : "bg-card border border-tile-border text-foreground hover:border-muted-foreground/40 active:scale-95",
-                lockedByOther && "cursor-not-allowed"
+                    : "bg-card border border-tile-border text-foreground",
+                interactive && !cell.isMarked && "hover:border-muted-foreground/40 active:scale-95",
+                !interactive && "cursor-default"
               )}
             >
               {!isFree && <TileMedia imagePath={cell.imagePath} hasText={!!cell.text} />}
@@ -296,10 +295,6 @@ export function CoopBoard({
                   )}
                 </>
               )}
-
-              {lockedByOther && (
-                <LockIcon className="absolute left-1 top-1 z-[2] size-3 text-marked-foreground/80" />
-              )}
             </button>
           )
         })}
@@ -316,6 +311,12 @@ export function CoopBoard({
           <span className="text-primary"> · blackout complete! 🎉</span>
         )}
       </p>
+
+      {!canMark && (
+        <p className="text-center text-xs text-muted-foreground">
+          Only hosts can mark squares. Watch the board fill in live!
+        </p>
+      )}
     </div>
   )
 }

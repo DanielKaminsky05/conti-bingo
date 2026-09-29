@@ -38,9 +38,9 @@ export async function getOrCreateCoopBoard(
 }
 
 /**
- * Mark/unmark a square on the shared board. RLS enforces the co-op rule: any
- * member may claim an unmarked square, but only the marker may unmark their own
- * — so `marked_by` doubles as griefing protection and contribution credit. The
+ * Mark/unmark a square on the shared board. RLS enforces the co-op rule: only
+ * group HOSTS (owner/admin) may write; regular members just watch. `marked_by`
+ * records which host marked each square (contributions leaderboard). The
  * blackout trigger updates `coop_boards.completed_at`.
  */
 export async function markCoopCell(input: unknown): Promise<ActionResult<null>> {
@@ -72,12 +72,9 @@ export async function markCoopCell(input: unknown): Promise<ActionResult<null>> 
       .select('id')
 
     if (error) throw new ActionError('error', error.message)
-    // RLS returns zero rows when the square is claimed by someone else.
+    // RLS returns zero rows when the caller isn't a host of the board's group.
     if (!data || data.length === 0) {
-      throw new ActionError(
-        'forbidden',
-        marked ? 'That square is already taken.' : "You can only unmark squares you marked."
-      )
+      throw new ActionError('forbidden', 'Only hosts can mark squares on a co-op board.')
     }
 
     // Play hub lives at the group route; the card id maps 1:1 to a group card.
