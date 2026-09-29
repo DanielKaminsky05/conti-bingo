@@ -3,9 +3,15 @@
 import { freeSpacePosition } from "@/lib/bingo/layout"
 import { Badge } from "@/components/ui/badge"
 import { ViewToggle, useViewMode } from "@/components/common/view-toggle"
+import { TileMedia } from "@/components/bingo/tile-media"
 import { cn } from "@/lib/utils"
 
-export type CardChallenge = { id: string; text: string; points: number }
+export type CardChallenge = {
+  id: string
+  text: string | null
+  points: number
+  imagePath?: string | null
+}
 
 const GRID_COLS: Record<number, string> = {
   3: "grid-cols-3",
@@ -65,11 +71,25 @@ export function CardChallengesView({
             return (
               <div
                 key={tile.pos}
-                className="relative flex aspect-square items-center justify-center rounded-xl border border-tile-border bg-card p-1.5 text-center text-[11px] font-bold leading-tight break-words hyphens-auto sm:text-xs"
+                className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-tile-border bg-card p-1.5 text-center text-[11px] font-bold leading-tight break-words hyphens-auto sm:text-xs"
               >
-                <span className="line-clamp-4">{tile.challenge?.text}</span>
+                <TileMedia
+                  imagePath={tile.challenge?.imagePath}
+                  hasText={!!tile.challenge?.text}
+                />
+                {tile.challenge?.text && (
+                  <span
+                    className={cn(
+                      "line-clamp-4",
+                      tile.challenge.imagePath &&
+                        "relative z-[1] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+                    )}
+                  >
+                    {tile.challenge.text}
+                  </span>
+                )}
                 {tile.challenge && tile.challenge.points > 1 && (
-                  <span className="absolute right-1 top-1 rounded bg-gold/20 px-1 text-[9px] text-gold">
+                  <span className="absolute right-1 top-1 z-[1] rounded bg-gold/20 px-1 text-[9px] text-gold">
                     {tile.challenge.points}
                   </span>
                 )}
@@ -87,7 +107,14 @@ export function CardChallengesView({
               <span className="grid size-6 shrink-0 place-items-center rounded-md bg-muted text-xs font-medium text-muted-foreground">
                 {i + 1}
               </span>
-              <span className="min-w-0 flex-1">{c.text}</span>
+              {c.imagePath && (
+                <span className="relative size-9 shrink-0 overflow-hidden rounded-md">
+                  <TileMedia imagePath={c.imagePath} hasText={false} />
+                </span>
+              )}
+              <span className="min-w-0 flex-1">
+                {c.text ?? (c.imagePath ? "Photo square" : "")}
+              </span>
               <Badge variant="outline">
                 {c.points} {c.points === 1 ? "pt" : "pts"}
               </Badge>

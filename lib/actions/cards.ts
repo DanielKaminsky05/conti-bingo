@@ -7,6 +7,7 @@ import {
   createCardSchema,
   updateCardSchema,
   cardIdSchema,
+  groupIdSchema,
   type CreateCardInput,
 } from '@/lib/validation/cards'
 import type { Tables, TablesInsert } from '@/lib/supabase/database.types'
@@ -15,6 +16,12 @@ import type { Database } from '@/lib/supabase/database.types'
 
 type Supabase = SupabaseClient<Database>
 type CardRow = Tables<'cards'>
+
+// Square images live in the same public bucket as group images, under
+// `{groupId}/challenges/...`, so migration 06's storage RLS (admin writes,
+// member reads, keyed on the leading groupId folder) already governs them.
+const IMAGE_BUCKET = 'group-images'
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 /**
  * Core insert of a draft card + its challenges, shared by `createCard` and
@@ -49,7 +56,8 @@ async function insertDraftCard(
 
   const rows: TablesInsert<'challenges'>[] = input.challenges.map((c, index) => ({
     card_id: card.id,
-    text: c.text,
+    text: c.text ?? null,
+    image_path: c.imagePath ?? null,
     points: c.points,
     sort_index: index,
   }))
@@ -151,7 +159,7 @@ export async function updateCard(input: unknown): Promise<ActionResult<CardRow>>
     if (challenges !== undefined) {
       const { data: existing, error: exErr } = await supabase
         .from('challenges')
-        .select('id, sort_index, text')
+        .select('id, sort_index, text, image_path')
         .eq('card_id', cardId)
         .order('sort_index', { ascending: true })
       if (exErr) throw new ActionError('error', exErr.message)
@@ -165,7 +173,8 @@ export async function updateCard(input: unknown): Promise<ActionResult<CardRow>>
         if (delErr) throw new ActionError('error', delErr.message)
         const rows: TablesInsert<'challenges'>[] = challenges.map((c, index) => ({
           card_id: cardId,
-          text: c.text,
+          text: c.text ?? null,
+          image_path: c.imagePath ?? null,
           points: c.points,
           sort_index: index,
         }))
@@ -177,12 +186,17 @@ export async function updateCard(input: unknown): Promise<ActionResult<CardRow>>
         // `challenges.id` (referenced by every player's cells) is preserved.
         const changedTextIds: string[] = []
         for (let i = 0; i < existing.length; i++) {
+          const nextText = challenges[i].text ?? null
+          const nextImage = challenges[i].imagePath ?? null
           const { error: upErr } = await supabase
             .from('challenges')
-            .update({ text: challenges[i].text, points: challenges[i].points })
+            .update({ text: nextText, image_path: nextImage, points: challenges[i].points })
             .eq('id', existing[i].id)
           if (upErr) throw new ActionError('error', upErr.message)
-          if (existing[i].text !== challenges[i].text) changedTextIds.push(existing[i].id)
+          // A changed prompt (text OR image) un-completes that square across players.
+          if (existing[i].text !== nextText || existing[i].image_path !== nextImage) {
+            changedTextIds.push(existing[i].id)
+          }
         }
         // Un-mark each edited square across all players (revokes dependent
         // bingos via the trigger), then recompute points for still-marked cells.
@@ -255,5 +269,46 @@ export async function replaceActiveCard(input: unknown): Promise<ActionResult<{ 
 
     revalidatePath(`/groups/${parsed.data.groupId}`)
     return { cardId }
+  })
+}
+
+/**
+ * Upload a background image for a bingo square. Called from the card editor
+ * while authoring; returns the Storage object path, which the editor keeps in
+ * the draft and persists with the challenge on save (mirrors the group
+ * background flow — see uploadGroupBackground in lib/actions/groups.ts).
+ *
+ * Authorization is enforced by Storage RLS: only a group owner/admin may write
+ * under `{groupId}/...` in the `group-images` bucket. No DB write here.
+ */
+export async function uploadChallengeImage(
+  formData: FormData
+): Promise<ActionResult<{ path: string }>> {
+  return withResult(async () => {
+    const { supabase } = await requireUser()
+
+    const groupId = formData.get('groupId')
+    const file = formData.get('file')
+
+    if (typeof groupId !== 'string' || !groupIdSchema.safeParse({ groupId }).success) {
+      throw new ActionError('validation', 'A valid groupId is required.')
+    }
+    if (!(file instanceof File)) {
+      throw new ActionError('validation', 'A file is required.')
+    }
+    if (!file.type.startsWith('image/')) {
+      throw new ActionError('validation', 'File must be an image.')
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      throw new ActionError('validation', 'Image must be 5 MB or smaller.')
+    }
+
+    const path = `${groupId}/challenges/${crypto.randomUUID()}-${file.name}`
+    const { error: uploadError } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (uploadError) throw new ActionError('error', uploadError.message)
+
+    return { path }
   })
 }

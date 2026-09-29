@@ -137,27 +137,30 @@ export type Database = {
           card_id: string
           created_at: string
           id: string
+          image_path: string | null
           points: number
           sort_index: number
-          text: string
+          text: string | null
           updated_at: string
         }
         Insert: {
           card_id: string
           created_at?: string
           id?: string
+          image_path?: string | null
           points?: number
           sort_index: number
-          text: string
+          text?: string | null
           updated_at?: string
         }
         Update: {
           card_id?: string
           created_at?: string
           id?: string
+          image_path?: string | null
           points?: number
           sort_index?: number
-          text?: string
+          text?: string | null
           updated_at?: string
         }
         Relationships: [

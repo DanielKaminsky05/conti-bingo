@@ -11,11 +11,22 @@ import { z } from 'zod'
  *  - `endsAt > startsAt` when both are set
  */
 
-/** A single authored challenge (square) with an optional weighted point value (D7). */
-export const challengeInputSchema = z.object({
-  text: z.string().trim().min(1, 'Challenge text is required.').max(300, 'Challenge text is too long.'),
-  points: z.number().int('Points must be a whole number.').positive('Points must be greater than zero.').default(1),
-})
+/**
+ * A single authored challenge (square) with an optional weighted point value
+ * (D7). Text and image are each optional, but a square must have at least one
+ * of them — it may be text-only, image-only, or text-over-image. `imagePath` is
+ * a Storage object path in the `group-images` bucket (see uploadChallengeImage).
+ */
+export const challengeInputSchema = z
+  .object({
+    text: z.string().trim().min(1, 'Challenge text is required.').max(300, 'Challenge text is too long.').optional(),
+    imagePath: z.string().trim().max(500, 'Image path is too long.').optional(),
+    points: z.number().int('Points must be a whole number.').positive('Points must be greater than zero.').default(1),
+  })
+  .refine((c) => (c.text?.length ?? 0) > 0 || (c.imagePath?.length ?? 0) > 0, {
+    message: 'Each square needs text or an image.',
+    path: ['text'],
+  })
 
 export type ChallengeInput = z.infer<typeof challengeInputSchema>
 

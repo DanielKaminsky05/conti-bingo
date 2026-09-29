@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ReadOnlyBingoGrid } from "@/components/bingo/read-only-bingo-grid"
+import { TileMedia } from "@/components/bingo/tile-media"
 import type { GridCell } from "@/components/bingo/bingo-grid"
 
 export type ViewablePlayer = {
@@ -30,7 +31,7 @@ export type ViewableCard = {
   id: string
   gridSize: number
   freeSpace: boolean
-  challenges: { id: string; text: string }[]
+  challenges: { id: string; text: string | null; imagePath?: string | null }[]
 }
 
 type LoadState =
@@ -53,7 +54,13 @@ export function PlayerCardDialog({
 
   const challengeText = useMemo(() => {
     const map = new Map<string, string>()
-    for (const c of card.challenges) map.set(c.id, c.text)
+    for (const c of card.challenges) map.set(c.id, c.text ?? "")
+    return map
+  }, [card.challenges])
+
+  const challengeImage = useMemo(() => {
+    const map = new Map<string, string | null>()
+    for (const c of card.challenges) map.set(c.id, c.imagePath ?? null)
     return map
   }, [card.challenges])
 
@@ -100,6 +107,7 @@ export function PlayerCardDialog({
         position: row.position,
         challengeId: row.challenge_id,
         text: row.challenge_id ? challengeText.get(row.challenge_id) ?? "" : null,
+        imagePath: row.challenge_id ? challengeImage.get(row.challenge_id) ?? null : null,
         isMarked: row.is_marked,
       }))
       setState({ status: "ready", cells })
@@ -109,7 +117,7 @@ export function PlayerCardDialog({
     return () => {
       cancelled = true
     }
-  }, [player, card.id, challengeText])
+  }, [player, card.id, challengeText, challengeImage])
 
   const avatarUrl = player ? publicStorageUrl("avatars", player.avatarPath) : null
   const markedCount =
@@ -210,13 +218,18 @@ export function PlayerCardDialog({
                         >
                           {c.isMarked && <CheckIcon className="size-3.5" />}
                         </span>
+                        {c.imagePath && (
+                          <span className="relative size-9 shrink-0 overflow-hidden rounded-md">
+                            <TileMedia imagePath={c.imagePath} hasText={false} />
+                          </span>
+                        )}
                         <span
                           className={cn(
                             "min-w-0 flex-1",
                             c.isMarked && "text-muted-foreground line-through"
                           )}
                         >
-                          {c.text}
+                          {c.text ?? (c.imagePath ? "Photo square" : "")}
                         </span>
                       </li>
                     ))}

@@ -2,14 +2,22 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { AlertTriangleIcon, SaveIcon, SendIcon, PlusIcon } from "lucide-react"
+import {
+  AlertTriangleIcon,
+  SaveIcon,
+  SendIcon,
+  PlusIcon,
+  ImageIcon,
+  Trash2Icon,
+} from "lucide-react"
 import { toast } from "sonner"
-import { createCard, updateCard, publishCard } from "@/lib/actions/cards"
+import { createCard, updateCard, publishCard, uploadChallengeImage } from "@/lib/actions/cards"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubmitButton } from "@/components/common/submit-button"
 import { ViewToggle, useViewMode } from "@/components/common/view-toggle"
+import { TileMedia } from "@/components/bingo/tile-media"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
@@ -26,7 +34,7 @@ type GridSize = 4 | 5 | 6
 type LayoutMode = Enums<"card_layout_mode">
 type WinCondition = Enums<"card_win_condition">
 
-type ChallengeDraft = { text: string; points: string }
+type ChallengeDraft = { text: string; points: string; imagePath?: string }
 
 export type CardEditorInitial = {
   cardId: string
@@ -38,7 +46,7 @@ export type CardEditorInitial = {
   winCondition: WinCondition
   startsAt: string | null
   endsAt: string | null
-  challenges: { text: string; points: number }[]
+  challenges: { text: string | null; points: number; imagePath?: string | null }[]
 }
 
 const GRID_COLS: Record<number, string> = {
@@ -106,9 +114,14 @@ export function CardEditor({
   const [endsAt, setEndsAt] = useState<string>(isoToLocalInput(initial?.endsAt ?? null))
   const [challenges, setChallenges] = useState<ChallengeDraft[]>(
     initial?.challenges?.length
-      ? initial.challenges.map((c) => ({ text: c.text, points: String(c.points) }))
+      ? initial.challenges.map((c) => ({
+          text: c.text ?? "",
+          points: String(c.points),
+          imagePath: c.imagePath ?? undefined,
+        }))
       : []
   )
+  const [uploading, setUploading] = useState(false)
   const [editing, setEditing] = useState<number | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [view, setView] = useViewMode("card-editor-view", "grid")
@@ -124,7 +137,9 @@ export function CardEditor({
     setChallenges((prev) => resize(prev, required))
   }, [required])
 
-  const filledCount = challenges.filter((c) => c.text.trim().length > 0).length
+  const filledCount = challenges.filter(
+    (c) => c.text.trim().length > 0 || !!c.imagePath
+  ).length
   const structuralWarning = mode === "edit"
   const gridSizes: GridSize[] = useMemo(() => [4, 5, 6], [])
 
@@ -137,20 +152,46 @@ export function CardEditor({
     setChallenges((prev) => prev.map((c, i) => (i === index ? { ...c, ...patch } : c)))
   }
 
-  function validate():
-    | { ok: true; payloadChallenges: { text: string; points: number }[] }
-    | { ok: false } {
+  async function onPickTileImage(index: number, file: File | null) {
+    if (!file) return
+    if (!file.type.startsWith("image/")) {
+      toast.error("File must be an image.")
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be 5 MB or smaller.")
+      return
+    }
+    setUploading(true)
+    const fd = new FormData()
+    fd.append("groupId", groupId)
+    fd.append("file", file)
+    const res = await uploadChallengeImage(fd)
+    setUploading(false)
+    if (!res.ok) {
+      toast.error(res.error)
+      return
+    }
+    updateChallenge(index, { imagePath: res.data.path })
+    toast.success("Image added.")
+  }
+
+  type PayloadChallenge = { text?: string; points: number; imagePath?: string }
+
+  function validate(): { ok: true; payloadChallenges: PayloadChallenge[] } | { ok: false } {
     const next: Record<string, string> = {}
     if (!title.trim()) next.title = "Title is required."
     else if (title.trim().length > 120) next.title = "Title is too long."
     if (description.trim().length > 2000) next.description = "Description is too long."
 
-    const payloadChallenges: { text: string; points: number }[] = []
+    const payloadChallenges: PayloadChallenge[] = []
     let emptyTiles = 0
     let badPoints = false
     for (const c of challenges) {
       const text = c.text.trim()
-      if (!text) {
+      const hasImage = !!c.imagePath
+      // A tile needs text or an image (D-square-images).
+      if (!text && !hasImage) {
         emptyTiles++
         continue
       }
@@ -159,11 +200,15 @@ export function CardEditor({
         badPoints = true
         break
       }
-      payloadChallenges.push({ text, points })
+      payloadChallenges.push({
+        text: text || undefined,
+        imagePath: c.imagePath || undefined,
+        points,
+      })
     }
     if (badPoints) next.challenges = "Points must be a whole number greater than zero."
     else if (emptyTiles > 0)
-      next.challenges = `Fill in every tile — ${emptyTiles} still empty.`
+      next.challenges = `Fill in every tile — ${emptyTiles} still empty (add text or an image).`
 
     const startIso = localInputToIso(startsAt)
     const endIso = localInputToIso(endsAt)
@@ -176,7 +221,7 @@ export function CardEditor({
     return { ok: true, payloadChallenges }
   }
 
-  function buildBasePayload(payloadChallenges: { text: string; points: number }[]) {
+  function buildBasePayload(payloadChallenges: PayloadChallenge[]) {
     return {
       title: title.trim(),
       description: description.trim() || undefined,
@@ -416,6 +461,8 @@ export function CardEditor({
               }
               const c = challenges[tile.index]
               const text = c?.text.trim() ?? ""
+              const hasImage = !!c?.imagePath
+              const filled = text || hasImage
               const points = Number(c?.points ?? "1")
               return (
                 <button
@@ -423,20 +470,30 @@ export function CardEditor({
                   type="button"
                   onClick={() => setEditing(tile.index)}
                   className={cn(
-                    "relative flex aspect-square items-center justify-center rounded-xl p-1.5 text-center text-[11px] font-bold leading-tight break-words transition-all sm:text-xs",
+                    "relative flex aspect-square items-center justify-center overflow-hidden rounded-xl p-1.5 text-center text-[11px] font-bold leading-tight break-words transition-all sm:text-xs",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-                    text
+                    filled
                       ? "bg-card border border-tile-border text-foreground hover:border-muted-foreground/50"
                       : "border-2 border-dashed border-tile-border text-muted-foreground hover:border-muted-foreground/60"
                   )}
                 >
+                  <TileMedia imagePath={c?.imagePath} hasText={!!text} />
                   {text ? (
-                    <span className="line-clamp-4">{text}</span>
+                    <span
+                      className={cn(
+                        "line-clamp-4",
+                        hasImage && "relative z-[1] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+                      )}
+                    >
+                      {text}
+                    </span>
+                  ) : hasImage ? (
+                    <ImageIcon className="relative z-[1] size-4 text-white/90 drop-shadow" />
                   ) : (
                     <PlusIcon className="size-4 opacity-60" />
                   )}
-                  {text && points > 1 && (
-                    <span className="absolute right-1 top-1 rounded bg-gold/20 px-1 text-[9px] text-gold">
+                  {filled && points > 1 && (
+                    <span className="absolute right-1 top-1 z-[1] rounded bg-gold/20 px-1 text-[9px] text-gold">
                       {points}
                     </span>
                   )}
@@ -494,7 +551,7 @@ export function CardEditor({
           {current && editing !== null && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="tile-text">Challenge</Label>
+                <Label htmlFor="tile-text">Challenge (optional if an image is set)</Label>
                 <textarea
                   id="tile-text"
                   autoFocus
@@ -509,6 +566,42 @@ export function CardEditor({
                   )}
                 />
               </div>
+
+              {/* Background image (optional) — text overlays it when both are set. */}
+              <div className="space-y-2">
+                <Label>Image (optional)</Label>
+                {current.imagePath ? (
+                  <div className="flex items-center gap-3">
+                    <span className="relative size-16 shrink-0 overflow-hidden rounded-lg border border-tile-border">
+                      <TileMedia imagePath={current.imagePath} hasText={false} />
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={uploading}
+                      onClick={() => updateChallenge(editing, { imagePath: undefined })}
+                    >
+                      <Trash2Icon />
+                      Remove image
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="size-5 shrink-0 text-muted-foreground" />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploading}
+                      onChange={(e) => onPickTileImage(editing, e.target.files?.[0] ?? null)}
+                    />
+                  </div>
+                )}
+                {uploading && (
+                  <p className="text-xs text-muted-foreground">Uploading image…</p>
+                )}
+              </div>
+
               <div className="flex items-center gap-2">
                 <Label htmlFor="tile-points" className="text-sm">
                   Points

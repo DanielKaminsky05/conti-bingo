@@ -48,7 +48,11 @@ export default async function LeaderboardPage({
           id: card.id,
           gridSize: card.grid_size,
           freeSpace: card.free_space,
-          challenges: card.challenges.map((c) => ({ id: c.id, text: c.text })),
+          challenges: card.challenges.map((c) => ({
+            id: c.id,
+            text: c.text,
+            imagePath: c.image_path,
+          })),
         }}
       />
     </div>

@@ -72,7 +72,11 @@ export default async function GroupPlayPage({
             grid_size: card.grid_size,
             free_space: card.free_space,
             layout_mode: card.layout_mode,
-            challenges: card.challenges.map((c) => ({ id: c.id, text: c.text })),
+            challenges: card.challenges.map((c) => ({
+              id: c.id,
+              text: c.text,
+              imagePath: c.image_path,
+            })),
           }}
           groupId={id}
           completions={completions}

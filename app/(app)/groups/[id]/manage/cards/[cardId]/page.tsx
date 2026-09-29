@@ -39,7 +39,11 @@ export default async function ManageCardEditPage({
     winCondition: card.win_condition,
     startsAt: card.starts_at,
     endsAt: card.ends_at,
-    challenges: challenges.map((c) => ({ text: c.text, points: c.points })),
+    challenges: challenges.map((c) => ({
+      text: c.text,
+      points: c.points,
+      imagePath: c.image_path,
+    })),
   }
 
   return (

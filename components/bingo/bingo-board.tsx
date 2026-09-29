@@ -11,7 +11,7 @@ import { BingoGrid, type GridCell } from "@/components/bingo/bingo-grid"
 import { ViewToggle, useViewMode } from "@/components/common/view-toggle"
 import type { ChallengeCompletions } from "@/lib/bingo/completions"
 
-type Challenge = { id: string; text: string }
+type Challenge = { id: string; text: string | null; imagePath?: string | null }
 
 export type BingoBoardCard = {
   id: string
@@ -54,7 +54,13 @@ export function BingoBoard({
 
   const challengeText = useMemo(() => {
     const map = new Map<string, string>()
-    for (const c of card.challenges) map.set(c.id, c.text)
+    for (const c of card.challenges) map.set(c.id, c.text ?? "")
+    return map
+  }, [card.challenges])
+
+  const challengeImage = useMemo(() => {
+    const map = new Map<string, string | null>()
+    for (const c of card.challenges) map.set(c.id, c.imagePath ?? null)
     return map
   }, [card.challenges])
 
@@ -77,11 +83,12 @@ export function BingoBoard({
         position: row.position,
         challengeId: row.challenge_id,
         text: row.challenge_id ? challengeText.get(row.challenge_id) ?? "" : null,
+        imagePath: row.challenge_id ? challengeImage.get(row.challenge_id) ?? null : null,
         isMarked: row.is_marked,
       }))
       setCells(mapped)
     },
-    [challengeText]
+    [challengeText, challengeImage]
   )
 
   // Ensure the player card exists, then load cells.

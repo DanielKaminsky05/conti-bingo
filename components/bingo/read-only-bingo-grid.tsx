@@ -1,7 +1,9 @@
 "use client"
 
 import { useMemo } from "react"
+import { CheckIcon } from "lucide-react"
 import { completedLines, linesFor } from "@/lib/bingo/winlines"
+import { TileMedia } from "@/components/bingo/tile-media"
 import { cn } from "@/lib/utils"
 import type { GridCell } from "@/components/bingo/bingo-grid"
 
@@ -65,12 +67,33 @@ export function ReadOnlyBingoGrid({
               inLine && "ring-2 ring-gold"
             )}
           >
+            {!isFree && <TileMedia imagePath={cell.imagePath} hasText={!!cell.text} />}
+
             {isFree ? (
               <span className="text-lg" aria-hidden>
                 ★
               </span>
             ) : (
-              <span className="line-clamp-4">{cell.text}</span>
+              cell.text && (
+                <span
+                  className={cn(
+                    "line-clamp-4",
+                    cell.imagePath &&
+                      "relative z-[1] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+                  )}
+                >
+                  {cell.text}
+                </span>
+              )
+            )}
+
+            {!isFree && cell.isMarked && cell.imagePath && (
+              <span
+                aria-hidden
+                className="absolute inset-0 z-[1] flex items-center justify-center rounded-[inherit] bg-marked/70 text-marked-foreground"
+              >
+                <CheckIcon className="size-6" />
+              </span>
             )}
           </div>
         )

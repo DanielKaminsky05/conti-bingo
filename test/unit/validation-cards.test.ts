@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createCardSchema } from '@/lib/validation/cards'
+import { createCardSchema, challengeInputSchema } from '@/lib/validation/cards'
 
 /**
  * Unit tests for the Cards create Zod schema (C1 createCard).
@@ -135,6 +135,59 @@ describe('createCardSchema — points must be positive', () => {
     bad[5] = { text: 'negative points', points: -3 }
     const res = createCardSchema.safeParse(validInput({ challenges: bad }))
     expect(res.success).toBe(false)
+  })
+})
+
+describe('challengeInputSchema — text/image are each optional but one is required', () => {
+  it('accepts a text-only square', () => {
+    const res = challengeInputSchema.safeParse({ text: 'Thank the prof', points: 1 })
+    expect(res.success).toBe(true)
+  })
+
+  it('accepts an image-only square (no text)', () => {
+    const res = challengeInputSchema.safeParse({
+      imagePath: 'group-1/challenges/abc-photo.png',
+      points: 2,
+    })
+    expect(res.success).toBe(true)
+  })
+
+  it('accepts a text + image square', () => {
+    const res = challengeInputSchema.safeParse({
+      text: 'Spot the mascot',
+      imagePath: 'group-1/challenges/abc-photo.png',
+      points: 1,
+    })
+    expect(res.success).toBe(true)
+  })
+
+  it('rejects a square with neither text nor image', () => {
+    const res = challengeInputSchema.safeParse({ points: 1 })
+    expect(res.success).toBe(false)
+  })
+
+  it('rejects a square with empty text and no image', () => {
+    const res = challengeInputSchema.safeParse({ text: '   ', points: 1 })
+    expect(res.success).toBe(false)
+  })
+
+  it('defaults points to 1', () => {
+    const res = challengeInputSchema.safeParse({ text: 'hi' })
+    expect(res.success).toBe(true)
+    if (res.success) expect(res.data.points).toBe(1)
+  })
+})
+
+describe('createCardSchema — image-only squares count toward the grid', () => {
+  it('accepts a 4×4 filled entirely with image-only squares', () => {
+    const imageSquares = Array.from({ length: 16 }, (_, i) => ({
+      imagePath: `group-1/challenges/${i}.png`,
+      points: 1,
+    }))
+    const res = createCardSchema.safeParse(
+      validInput({ gridSize: 4, freeSpace: false, challenges: imageSquares }),
+    )
+    expect(res.success).toBe(true)
   })
 })
 

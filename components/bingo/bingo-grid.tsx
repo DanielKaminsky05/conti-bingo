@@ -19,12 +19,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { TileMedia } from "@/components/bingo/tile-media"
 import { cn } from "@/lib/utils"
 
 export type GridCell = {
   position: number
   challengeId: string | null
   text: string | null
+  imagePath?: string | null
   isMarked: boolean
 }
 
@@ -215,13 +217,18 @@ export function BingoGrid({
                   >
                     {cell.isMarked && <CheckIcon className="size-3.5" />}
                   </span>
+                  {cell.imagePath && (
+                    <span className="relative size-9 shrink-0 overflow-hidden rounded-md">
+                      <TileMedia imagePath={cell.imagePath} hasText={false} />
+                    </span>
+                  )}
                   <span
                     className={cn(
                       "min-w-0 flex-1",
                       cell.isMarked && "text-muted-foreground line-through"
                     )}
                   >
-                    {cell.text}
+                    {cell.text ?? (cell.imagePath ? "Photo square" : "")}
                   </span>
                 </button>
               </li>
@@ -261,12 +268,34 @@ export function BingoGrid({
                 inLine && "bingo-line-glow ring-2 ring-gold"
               )}
             >
+              {!isFree && <TileMedia imagePath={cell.imagePath} hasText={!!cell.text} />}
+
               {isFree ? (
                 <span className="text-lg" aria-hidden>
                   ★
                 </span>
               ) : (
-                <span className="line-clamp-4">{cell.text}</span>
+                cell.text && (
+                  <span
+                    className={cn(
+                      "line-clamp-4",
+                      cell.imagePath &&
+                        "relative z-[1] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+                    )}
+                  >
+                    {cell.text}
+                  </span>
+                )
+              )}
+
+              {/* Keep the marked state visible even when an image covers the tile. */}
+              {!isFree && cell.isMarked && cell.imagePath && (
+                <span
+                  aria-hidden
+                  className="absolute inset-0 z-[1] flex items-center justify-center rounded-[inherit] bg-marked/70 text-marked-foreground"
+                >
+                  <CheckIcon className="size-6" />
+                </span>
               )}
 
               {/* People-completed badge: tap opens the who-list; hover shows the count.

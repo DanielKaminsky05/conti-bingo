@@ -125,7 +125,12 @@ export default async function CardDetailPage({
 
       {/* Challenges */}
       <CardChallengesView
-        challenges={challenges.map((c) => ({ id: c.id, text: c.text, points: c.points }))}
+        challenges={challenges.map((c) => ({
+          id: c.id,
+          text: c.text,
+          points: c.points,
+          imagePath: c.image_path,
+        }))}
         gridSize={card.grid_size}
         freeSpace={card.free_space}
       />
