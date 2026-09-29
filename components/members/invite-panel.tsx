@@ -141,7 +141,7 @@ export function InvitePanel({
                   onChange={(e) => setRole(e.target.value as InviteRole)}
                   disabled={pending}
                   className={cn(
-                    "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none",
+                    "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-base outline-none md:text-sm",
                     "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
                     "disabled:pointer-events-none disabled:opacity-50 dark:bg-input/30"
                   )}

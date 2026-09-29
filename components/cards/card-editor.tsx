@@ -456,7 +456,7 @@ export function CardEditor({
                   onChange={(e) => updateChallenge(index, { text: e.target.value })}
                   placeholder="e.g. Thank the prof for picking me"
                   className={cn(
-                    "min-w-0 flex-1 resize-none rounded-lg border border-input bg-transparent px-3 py-1.5 text-sm outline-none",
+                    "min-w-0 flex-1 resize-none rounded-lg border border-input bg-transparent px-3 py-1.5 text-base outline-none md:text-sm",
                     "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                   )}
                 />
@@ -499,7 +499,7 @@ export function CardEditor({
                   onChange={(e) => updateChallenge(editing, { text: e.target.value })}
                   placeholder="e.g. Thank the prof for picking me"
                   className={cn(
-                    "w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none",
+                    "w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-base outline-none md:text-sm",
                     "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                   )}
                 />
