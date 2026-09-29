@@ -42,7 +42,17 @@ export default async function LeaderboardPage({
         <h2 className="font-heading text-lg font-semibold">Leaderboard</h2>
         <p className="text-sm text-muted-foreground">{card.title}</p>
       </div>
-      <Leaderboard rows={rows} cardId={card.id} currentUserId={user?.id ?? null} />
+      <Leaderboard
+        rows={rows}
+        cardId={card.id}
+        currentUserId={user?.id ?? null}
+        card={{
+          id: card.id,
+          gridSize: card.grid_size,
+          freeSpace: card.free_space,
+          challenges: card.challenges.map((c) => ({ id: c.id, text: c.text })),
+        }}
+      />
     </div>
   )
 }

@@ -92,6 +92,12 @@ export default async function GroupPlayPage({
           rows={previewRows}
           cardId={card.id}
           currentUserId={user?.id ?? null}
+          card={{
+            id: card.id,
+            gridSize: card.grid_size,
+            freeSpace: card.free_space,
+            challenges: card.challenges.map((c) => ({ id: c.id, text: c.text })),
+          }}
           preview
           previewLimit={5}
         />

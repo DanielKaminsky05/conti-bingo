@@ -6,6 +6,11 @@ import { subscribeToBingos } from "@/lib/realtime/subscriptions"
 import { rankPlayers } from "@/lib/bingo/rank"
 import { publicStorageUrl } from "@/lib/storage-url"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  PlayerCardDialog,
+  type ViewableCard,
+  type ViewablePlayer,
+} from "@/components/bingo/player-card-dialog"
 import { cn } from "@/lib/utils"
 
 /**
@@ -37,17 +42,21 @@ export function Leaderboard({
   rows,
   cardId,
   currentUserId,
+  card,
   preview = false,
   previewLimit = 5,
 }: {
   rows: LeaderboardRow[]
   cardId: string
   currentUserId?: string | null
+  /** When provided, tapping a player opens a read-only preview of their board. */
+  card?: ViewableCard
   preview?: boolean
   previewLimit?: number
 }) {
   // Keep raw (un-capped) rows in state so realtime re-ranks stay stable.
   const [ranked, setRanked] = useState<LeaderboardRow[]>(() => rankPlayers(rows))
+  const [selected, setSelected] = useState<ViewablePlayer | null>(null)
 
   // Re-rank whenever the server passes fresh rows (e.g. router.refresh()).
   useEffect(() => {
@@ -96,6 +105,7 @@ export function Leaderboard({
   }
 
   return (
+    <>
     <ol className="space-y-1.5">
       {visible.map((row, i) => {
         const rank = i + 1
@@ -103,17 +113,10 @@ export function Leaderboard({
         const displayName = row.name || row.username || "Player"
         const avatarUrl = publicStorageUrl("avatars", row.avatar_path)
         const medal = rankIcon(rank)
+        const clickable = !!card && !!row.user_id
 
-        return (
-          <li
-            key={row.user_id || rank}
-            className={cn(
-              "flex items-center gap-3 rounded-xl border px-3 py-2 transition-colors",
-              isMe
-                ? "border-primary/40 bg-primary/5"
-                : "border-border bg-card"
-            )}
-          >
+        const inner = (
+          <>
             <div className="flex w-7 shrink-0 justify-center">
               {medal ? (
                 <span className="text-lg leading-none" aria-label={`Rank ${rank}`}>
@@ -155,9 +158,50 @@ export function Leaderboard({
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground">pts</p>
               </div>
             </div>
+          </>
+        )
+
+        const rowClass = cn(
+          "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors",
+          isMe ? "border-primary/40 bg-primary/5" : "border-border bg-card",
+          clickable && "hover:border-muted-foreground/40 hover:bg-accent/50 cursor-pointer"
+        )
+
+        return (
+          <li key={row.user_id || rank}>
+            {clickable ? (
+              <button
+                type="button"
+                className={rowClass}
+                onClick={() =>
+                  setSelected({
+                    userId: row.user_id,
+                    name: displayName,
+                    avatarPath: row.avatar_path,
+                    isMe,
+                  })
+                }
+                aria-label={`View ${displayName}'s card`}
+              >
+                {inner}
+              </button>
+            ) : (
+              <div className={rowClass}>{inner}</div>
+            )}
           </li>
         )
       })}
     </ol>
+
+    {card && (
+      <PlayerCardDialog
+        card={card}
+        player={selected}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null)
+        }}
+      />
+    )}
+    </>
   )
 }
