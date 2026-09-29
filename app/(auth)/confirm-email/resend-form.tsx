@@ -1,15 +1,13 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useTransition } from "react"
 import { toast } from "sonner"
 import { resendConfirmation } from "@/lib/actions/auth"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubmitButton } from "@/components/common/submit-button"
 
-export function ResendForm({ defaultEmail }: { defaultEmail?: string }) {
+export function ResendForm({ email }: { email: string }) {
   const [pending, start] = useTransition()
-  const [email, setEmail] = useState(defaultEmail ?? "")
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -27,13 +25,14 @@ export function ResendForm({ defaultEmail }: { defaultEmail?: string }) {
     <form onSubmit={onSubmit} className="space-y-3">
       <div className="space-y-2">
         <Label htmlFor="resend-email">Email</Label>
-        <Input
+        {/* Fixed to the address you signed up with — not editable here. To
+            confirm a different address, sign up again with that email. */}
+        <p
           id="resend-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+          className="rounded-md border bg-muted/50 px-3 py-2 text-sm font-medium break-all"
+        >
+          {email}
+        </p>
       </div>
       <SubmitButton pending={pending} variant="outline" className="w-full">
         Resend confirmation email

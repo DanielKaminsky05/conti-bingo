@@ -25,7 +25,17 @@ export default async function ConfirmEmailPage({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ResendForm defaultEmail={email} />
+        {email ? (
+          <ResendForm email={email} />
+        ) : (
+          <p className="text-center text-sm text-muted-foreground">
+            Need a confirmation link?{" "}
+            <Link href="/signup" className="font-medium text-foreground underline underline-offset-4">
+              Sign up
+            </Link>{" "}
+            with your email first.
+          </p>
+        )}
         <p className="text-center text-sm text-muted-foreground">
           Already confirmed?{" "}
           <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
