@@ -61,7 +61,7 @@ export default async function GroupLayout({
           )}
         </div>
       </header>
-      <GroupNav groupId={id} isHost={isHost(role)} />
+      <GroupNav groupId={id} isHost={isHost(role)} framed={!!background} />
       <div
         className={cn(
           background &&
