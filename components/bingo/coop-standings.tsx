@@ -1,11 +1,17 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { subscribeToCoopCells } from "@/lib/realtime/subscriptions"
 import { publicStorageUrl } from "@/lib/storage-url"
 import { AvatarZoom } from "@/components/common/avatar-zoom"
+import {
+  CoopPlayerDialog,
+  type CoopViewCard,
+  type CoopViewPlayer,
+} from "@/components/bingo/coop-player-dialog"
+import { cn } from "@/lib/utils"
 import type { CoopContributionRow } from "@/lib/bingo/coop-standings"
 
 /**
@@ -20,6 +26,7 @@ export function CoopStandings({
   marked,
   completed,
   currentUserId,
+  card,
 }: {
   rows: CoopContributionRow[]
   boardId: string | null
@@ -27,8 +34,11 @@ export function CoopStandings({
   marked: number
   completed: boolean
   currentUserId: string | null
+  /** When provided, tapping a contributor reveals the squares they marked. */
+  card?: CoopViewCard
 }) {
   const router = useRouter()
+  const [selected, setSelected] = useState<CoopViewPlayer | null>(null)
 
   useEffect(() => {
     if (!boardId) return
@@ -38,6 +48,8 @@ export function CoopStandings({
       void channel.unsubscribe()
     }
   }, [boardId, router])
+
+  const clickable = !!card && !!boardId
 
   const remaining = total - marked
   const pct = total > 0 ? Math.round((marked / total) * 100) : 0
@@ -73,29 +85,51 @@ export function CoopStandings({
           {rows.map((r, i) => {
             const avatarUrl = publicStorageUrl("avatars", r.avatarPath)
             const isMe = r.userId === currentUserId
+            const openPlayer = () =>
+              setSelected({
+                userId: r.userId,
+                name: r.name ?? "Member",
+                avatarPath: r.avatarPath,
+                isMe,
+              })
             return (
-              <li
-                key={r.userId}
-                className={cnRow(isMe)}
-              >
-                <span className="w-5 shrink-0 text-center text-sm font-semibold text-muted-foreground tabular-nums">
-                  {i + 1}
-                </span>
-                <AvatarZoom src={avatarUrl} name={r.name ?? "Member"} size="sm" />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {r.name ?? "Member"}
-                  {isMe && <span className="ml-1.5 text-xs text-primary">(you)</span>}
-                </span>
-                <div className="flex shrink-0 items-center gap-3 text-right">
-                  <div>
-                    <p className="text-sm font-semibold tabular-nums">{r.squares}</p>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                      squares
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold tabular-nums text-gold">{r.points}</p>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">pts</p>
+              <li key={r.userId}>
+                <div
+                  role={clickable ? "button" : undefined}
+                  tabIndex={clickable ? 0 : undefined}
+                  onClick={clickable ? openPlayer : undefined}
+                  onKeyDown={
+                    clickable
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            openPlayer()
+                          }
+                        }
+                      : undefined
+                  }
+                  aria-label={clickable ? `View squares ${r.name ?? "Member"} marked` : undefined}
+                  className={cnRow(isMe, clickable)}
+                >
+                  <span className="w-5 shrink-0 text-center text-sm font-semibold text-muted-foreground tabular-nums">
+                    {i + 1}
+                  </span>
+                  <AvatarZoom src={avatarUrl} name={r.name ?? "Member"} size="sm" />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {r.name ?? "Member"}
+                    {isMe && <span className="ml-1.5 text-xs text-primary">(you)</span>}
+                  </span>
+                  <div className="flex shrink-0 items-center gap-3 text-right">
+                    <div>
+                      <p className="text-sm font-semibold tabular-nums">{r.squares}</p>
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        squares
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold tabular-nums text-gold">{r.points}</p>
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">pts</p>
+                    </div>
                   </div>
                 </div>
               </li>
@@ -103,13 +137,25 @@ export function CoopStandings({
           })}
         </ul>
       )}
+
+      {card && (
+        <CoopPlayerDialog
+          boardId={boardId}
+          card={card}
+          player={selected}
+          onOpenChange={(open) => {
+            if (!open) setSelected(null)
+          }}
+        />
+      )}
     </div>
   )
 }
 
-function cnRow(isMe: boolean): string {
-  return [
+function cnRow(isMe: boolean, clickable: boolean): string {
+  return cn(
     "flex items-center gap-3 rounded-xl border px-3 py-2",
     isMe ? "border-primary/40 bg-primary/5" : "border-border bg-card",
-  ].join(" ")
+    clickable && "cursor-pointer transition-colors hover:border-muted-foreground/40 hover:bg-accent/50"
+  )
 }

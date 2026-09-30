@@ -149,6 +149,16 @@ export default async function CardDetailPage({
               marked={coopProgress?.marked ?? 0}
               completed={!!coopProgress?.completedAt}
               currentUserId={viewer?.id ?? null}
+              card={{
+                gridSize: card.grid_size,
+                freeSpace: card.free_space,
+                freeSpaceImagePath: card.free_space_image_path,
+                challenges: challenges.map((c) => ({
+                  id: c.id,
+                  text: c.text,
+                  imagePath: c.image_path,
+                })),
+              }}
             />
           ) : (
             <Leaderboard

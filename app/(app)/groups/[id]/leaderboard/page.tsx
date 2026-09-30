@@ -45,6 +45,16 @@ export default async function LeaderboardPage({
           marked={progress?.marked ?? 0}
           completed={!!progress?.completedAt}
           currentUserId={user?.id ?? null}
+          card={{
+            gridSize: card.grid_size,
+            freeSpace: card.free_space,
+            freeSpaceImagePath: card.free_space_image_path,
+            challenges: card.challenges.map((c) => ({
+              id: c.id,
+              text: c.text,
+              imagePath: c.image_path,
+            })),
+          }}
         />
       </div>
     )
