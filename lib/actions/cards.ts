@@ -271,6 +271,71 @@ export async function publishCard(input: unknown): Promise<ActionResult<CardRow>
 }
 
 /**
+ * Archive a card (active or draft → archived). Admin-only via RLS. The card's
+ * challenges and any player cards / co-op board are retained so the standings
+ * history stays viewable; it just stops being the group's live card.
+ */
+export async function archiveCard(input: unknown): Promise<ActionResult<{ cardId: string }>> {
+  return withResult(async () => {
+    const { supabase } = await requireUser()
+
+    const parsed = cardIdSchema.safeParse(input)
+    if (!parsed.success) {
+      throw new ActionError('validation', parsed.error.issues[0]?.message ?? 'Invalid input.')
+    }
+
+    const { data, error } = await supabase
+      .from('cards')
+      .update({ status: 'archived' })
+      .eq('id', parsed.data.cardId)
+      .select('id, group_id')
+    if (error) throw new ActionError('error', error.message)
+    if (!data || data.length === 0) {
+      throw new ActionError('forbidden', 'Card not found or not permitted.')
+    }
+
+    revalidatePath(`/groups/${data[0].group_id}`)
+    return { cardId: data[0].id }
+  })
+}
+
+/**
+ * Permanently delete a card and everything under it (challenges, player cards,
+ * cells, bingos, co-op board — all ON DELETE CASCADE). Admin-only via RLS.
+ * Irreversible; the UI confirms first.
+ */
+export async function deleteCard(input: unknown): Promise<ActionResult<{ cardId: string }>> {
+  return withResult(async () => {
+    const { supabase } = await requireUser()
+
+    const parsed = cardIdSchema.safeParse(input)
+    if (!parsed.success) {
+      throw new ActionError('validation', parsed.error.issues[0]?.message ?? 'Invalid input.')
+    }
+
+    // Read group first (for revalidation) — RLS lets an admin see it.
+    const { data: card } = await supabase
+      .from('cards')
+      .select('group_id')
+      .eq('id', parsed.data.cardId)
+      .maybeSingle()
+
+    const { data, error } = await supabase
+      .from('cards')
+      .delete()
+      .eq('id', parsed.data.cardId)
+      .select('id')
+    if (error) throw new ActionError('error', error.message)
+    if (!data || data.length === 0) {
+      throw new ActionError('forbidden', 'Card not found or not permitted.')
+    }
+
+    if (card?.group_id) revalidatePath(`/groups/${card.group_id}`)
+    return { cardId: parsed.data.cardId }
+  })
+}
+
+/**
  * C4 — replace the active card: create a fresh draft (via the create path) then
  * publish it, archiving the previous active card. Composed from the same
  * helpers, so it inherits the non-atomic publish caveat above.

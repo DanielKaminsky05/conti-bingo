@@ -4,6 +4,7 @@ import { getActiveCard, listDraftCards } from "@/lib/queries/cards"
 import { buttonVariants } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/empty-state"
 import { CardListItem } from "@/components/cards/card-list-item"
+import { CardAdminActions } from "@/components/cards/card-admin-actions"
 import { cn } from "@/lib/utils"
 
 export default async function ManageCardsPage({
@@ -40,12 +41,17 @@ export default async function ManageCardsPage({
           )}
         </div>
         {active ? (
-          <CardListItem
-            groupId={id}
-            card={active}
-            challengeCount={active.challenges?.length}
-            href={`/groups/${id}/cards/${active.id}`}
-          />
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <CardListItem
+                groupId={id}
+                card={active}
+                challengeCount={active.challenges?.length}
+                href={`/groups/${id}/cards/${active.id}`}
+              />
+            </div>
+            <CardAdminActions cardId={active.id} title={active.title} canArchive />
+          </div>
         ) : (
           <EmptyState icon={<LayoutGridIcon />} title="No active card" />
         )}
@@ -57,12 +63,16 @@ export default async function ManageCardsPage({
         {drafts.length > 0 ? (
           <div className="space-y-2">
             {drafts.map((card) => (
-              <CardListItem
-                key={card.id}
-                groupId={id}
-                card={card}
-                href={`${manageBase}/${card.id}`}
-              />
+              <div key={card.id} className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <CardListItem
+                    groupId={id}
+                    card={card}
+                    href={`${manageBase}/${card.id}`}
+                  />
+                </div>
+                <CardAdminActions cardId={card.id} title={card.title} canArchive={false} />
+              </div>
             ))}
           </div>
         ) : (
