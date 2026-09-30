@@ -25,11 +25,7 @@ export default async function CardsPage({ params }: { params: Promise<{ id: stri
             challengeCount={active.challenges?.length}
           />
         ) : (
-          <EmptyState
-            icon={<LayoutGridIcon />}
-            title="No active card"
-            description="The host hasn't published a bingo card yet. Check back soon."
-          />
+          <EmptyState icon={<LayoutGridIcon />} title="No active card" />
         )}
       </section>
 
@@ -43,11 +39,7 @@ export default async function CardsPage({ params }: { params: Promise<{ id: stri
             ))}
           </div>
         ) : (
-          <EmptyState
-            icon={<ArchiveIcon />}
-            title="No archived cards"
-            description="Past cards land here once a new one is published."
-          />
+          <EmptyState icon={<ArchiveIcon />} title="No archived cards" />
         )}
       </section>
     </div>

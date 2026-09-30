@@ -1,14 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import {
-  ArrowLeftIcon,
-  Grid3x3Icon,
-  LayersIcon,
-  SparklesIcon,
-  TrophyIcon,
-  CalendarIcon,
-  RefreshCwIcon,
-} from "lucide-react"
+import { ArrowLeftIcon, CalendarIcon, RefreshCwIcon } from "lucide-react"
 import { getCard } from "@/lib/queries/cards"
 import { getMyRole, isHost } from "@/lib/queries/membership"
 import { CardChallengesView } from "@/components/cards/card-challenges-view"
@@ -81,29 +73,12 @@ export default async function CardDetailPage({
         )}
       </div>
 
-      {/* Config summary */}
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <ConfigItem
-          icon={<Grid3x3Icon />}
-          label="Grid"
-          value={`${card.grid_size}×${card.grid_size}`}
-        />
-        <ConfigItem
-          icon={<LayersIcon />}
-          label="Layout"
-          value={card.layout_mode === "shuffled" ? "Shuffled" : "Identical"}
-        />
-        <ConfigItem
-          icon={<SparklesIcon />}
-          label="Free space"
-          value={card.free_space ? "Yes" : "No"}
-        />
-        <ConfigItem
-          icon={<TrophyIcon />}
-          label="Win"
-          value={card.win_condition === "line" ? "Line" : "Blackout"}
-        />
-      </dl>
+      {/* Layout + win, blended into the page (grid size / free space are obvious
+          from the board below). */}
+      <p className="text-sm text-muted-foreground">
+        {card.layout_mode === "shuffled" ? "Shuffled" : "Identical"} ·{" "}
+        {card.win_condition === "line" ? "Line to win" : "Blackout to win"}
+      </p>
 
       {(start || end) && (
         <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card px-4 py-3 text-sm">
@@ -135,26 +110,6 @@ export default async function CardDetailPage({
         freeSpace={card.free_space}
         freeSpaceImagePath={card.free_space_image_path}
       />
-    </div>
-  )
-}
-
-function ConfigItem({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3">
-      <dt className="flex items-center gap-1.5 text-xs text-muted-foreground [&_svg]:size-3.5">
-        {icon}
-        {label}
-      </dt>
-      <dd className="mt-1 font-medium">{value}</dd>
     </div>
   )
 }

@@ -32,7 +32,6 @@ export default async function GroupPlayPage({
       return (
         <EmptyState
           title="No active card yet"
-          description="Create a bingo card to kick off the game for your group."
           action={
             <Link
               href={`/groups/${id}/manage/cards/new`}
@@ -44,12 +43,7 @@ export default async function GroupPlayPage({
         />
       )
     }
-    return (
-      <EmptyState
-        title="Waiting for a card"
-        description="A host hasn't started a game yet. Check back soon!"
-      />
-    )
+    return <EmptyState title="Waiting for a card" />
   }
 
   const challenges = card.challenges.map((c) => ({

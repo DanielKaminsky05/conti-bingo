@@ -22,10 +22,7 @@ export default async function LeaderboardPage({
 
   if (!card) {
     return (
-      <EmptyState
-        title="No leaderboard yet"
-        description="Standings appear once a host starts an active card."
-      />
+      <EmptyState title="No leaderboard yet" />
     )
   }
 

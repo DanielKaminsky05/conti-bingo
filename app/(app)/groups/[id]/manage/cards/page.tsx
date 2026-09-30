@@ -47,11 +47,7 @@ export default async function ManageCardsPage({
             href={`/groups/${id}/cards/${active.id}`}
           />
         ) : (
-          <EmptyState
-            icon={<LayoutGridIcon />}
-            title="No active card"
-            description="Publish a draft to make it the group's live bingo card."
-          />
+          <EmptyState icon={<LayoutGridIcon />} title="No active card" />
         )}
       </section>
 
@@ -73,7 +69,6 @@ export default async function ManageCardsPage({
           <EmptyState
             icon={<FileEditIcon />}
             title="No drafts"
-            description="Start a new card to sketch out challenges before publishing."
             action={
               <Link
                 href={`${manageBase}/new`}
