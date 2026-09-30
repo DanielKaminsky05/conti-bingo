@@ -204,10 +204,10 @@ export function PlayerCardDialog({
                       <li
                         key={c.position}
                         className={cn(
-                          "flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm",
+                          "flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm transition-colors",
                           c.isMarked
-                            ? "border-primary/40 bg-primary/5"
-                            : "border-border bg-card"
+                            ? "border-marked/50 bg-marked/10"
+                            : "border-border bg-card opacity-70"
                         )}
                       >
                         <span

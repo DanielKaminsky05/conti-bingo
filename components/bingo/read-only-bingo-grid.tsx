@@ -64,8 +64,8 @@ export function ReadOnlyBingoGrid({
               isFree
                 ? "bg-free text-free-foreground"
                 : cell.isMarked
-                  ? "bg-marked text-marked-foreground shadow-sm"
-                  : "bg-card border border-tile-border text-foreground",
+                  ? "bg-marked text-marked-foreground shadow-sm ring-2 ring-marked/60"
+                  : "bg-card border border-tile-border text-foreground opacity-60",
               inLine && "ring-2 ring-gold"
             )}
           >

@@ -162,24 +162,33 @@ export function Leaderboard({
           clickable && "hover:border-muted-foreground/40 hover:bg-accent/50 cursor-pointer"
         )
 
+        const open = () =>
+          setSelected({
+            userId: row.user_id,
+            name: displayName,
+            avatarPath: row.avatar_path,
+            isMe,
+          })
+
         return (
           <li key={row.user_id || rank}>
             {clickable ? (
-              <button
-                type="button"
+              // A div (not a button) so the AvatarZoom button can nest legally.
+              <div
+                role="button"
+                tabIndex={0}
                 className={rowClass}
-                onClick={() =>
-                  setSelected({
-                    userId: row.user_id,
-                    name: displayName,
-                    avatarPath: row.avatar_path,
-                    isMe,
-                  })
-                }
+                onClick={open}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    open()
+                  }
+                }}
                 aria-label={`View ${displayName}'s card`}
               >
                 {inner}
-              </button>
+              </div>
             ) : (
               <div className={rowClass}>{inner}</div>
             )}
