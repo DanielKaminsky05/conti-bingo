@@ -1,10 +1,11 @@
-import { getCurrentProfile } from "@/lib/auth/current-user"
+import { getCurrentProfile, getCurrentUser } from "@/lib/auth/current-user"
 import { AvatarUploader } from "@/components/profile/avatar-uploader"
 import { ProfileForm } from "@/components/profile/profile-form"
+import { SecuritySettings } from "@/components/profile/security-settings"
 import { EmptyState } from "@/components/common/empty-state"
 
 export default async function ProfilePage() {
-  const profile = await getCurrentProfile()
+  const [profile, user] = await Promise.all([getCurrentProfile(), getCurrentUser()])
 
   if (!profile) {
     return (
@@ -25,6 +26,10 @@ export default async function ProfilePage() {
       </div>
       <AvatarUploader profile={profile} />
       <ProfileForm profile={profile} />
+
+      <hr className="border-border" />
+
+      <SecuritySettings currentEmail={user?.email ?? null} />
     </div>
   )
 }

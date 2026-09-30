@@ -10,6 +10,7 @@ import {
   resendSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  changeEmailSchema,
 } from '@/lib/validation/auth'
 
 /**
@@ -171,6 +172,34 @@ export async function updatePassword(input: unknown): Promise<ActionResult<null>
     const { supabase } = await requireUser()
 
     const { error } = await supabase.auth.updateUser({ password })
+    if (error) {
+      throw new ActionError('error', error.message)
+    }
+
+    return null
+  })
+}
+
+/**
+ * Change the signed-in user's email. Supabase sends a confirmation link to the
+ * new address (and, per project settings, the old one); the change only takes
+ * effect once confirmed, so the current email keeps working until then.
+ */
+export async function updateEmail(input: unknown): Promise<ActionResult<null>> {
+  return withResult(async () => {
+    const parsed = changeEmailSchema.safeParse(input)
+    if (!parsed.success) {
+      throw new ActionError('validation', parsed.error.issues[0]?.message ?? 'Invalid input.')
+    }
+    const { email } = parsed.data
+
+    const origin = await resolveOrigin()
+    const { supabase } = await requireUser()
+
+    const { error } = await supabase.auth.updateUser(
+      { email },
+      { emailRedirectTo: `${origin}/auth/callback` }
+    )
     if (error) {
       throw new ActionError('error', error.message)
     }

@@ -30,6 +30,10 @@ export const resetPasswordSchema = z
     path: ['confirm'],
   })
 
+export const changeEmailSchema = z.object({
+  email: z.email('Enter a valid email address.'),
+})
+
 export type SignUpInput = z.infer<typeof signUpSchema>
 export type SignInInput = z.infer<typeof signInSchema>
 export type ResendInput = z.infer<typeof resendSchema>
