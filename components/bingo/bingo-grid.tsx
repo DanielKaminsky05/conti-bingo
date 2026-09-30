@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TileMedia, FreeSpaceContent } from "@/components/bingo/tile-media"
+import { MarkConfirmDialog } from "@/components/bingo/mark-confirm-dialog"
 import { cn } from "@/lib/utils"
 
 export type GridCell = {
@@ -75,6 +76,8 @@ export function BingoGrid({
   const [burst, setBurst] = useState(false)
   // The challenge whose "who completed it" dialog is open (null = closed).
   const [openChallengeId, setOpenChallengeId] = useState<string | null>(null)
+  // The square awaiting a "mark this?" confirmation (null = none).
+  const [pendingCell, setPendingCell] = useState<GridCell | null>(null)
 
   // Keep local state in sync if the parent re-hydrates cells.
   useEffect(() => {
@@ -152,11 +155,8 @@ export function BingoGrid({
     }
   }, [playerCardId, cardId])
 
-  function toggle(cell: GridCell) {
-    if (cell.position === freeSpacePosition) return // free space is non-interactive
-    const next = !cell.isMarked
-
-    // Optimistic update.
+  // Apply a mark/unmark: optimistic update + server call, revert on failure.
+  function applyMark(cell: GridCell, next: boolean) {
     setCells((prev) =>
       prev.map((c) => (c.position === cell.position ? { ...c, isMarked: next } : c))
     )
@@ -168,7 +168,6 @@ export function BingoGrid({
         marked: next,
       })
       if (!res.ok) {
-        // Revert.
         setCells((prev) =>
           prev.map((c) =>
             c.position === cell.position ? { ...c, isMarked: !next } : c
@@ -177,6 +176,17 @@ export function BingoGrid({
         toast.error(res.error)
       }
     })
+  }
+
+  function toggle(cell: GridCell) {
+    if (cell.position === freeSpacePosition) return // free space is non-interactive
+    // Completing a square asks for confirmation (prevents stray taps); unmarking
+    // is a correction, so it applies immediately.
+    if (!cell.isMarked) {
+      setPendingCell(cell)
+      return
+    }
+    applyMark(cell, false)
   }
 
   return (
@@ -353,6 +363,19 @@ export function BingoGrid({
         open={openChallengeId !== null}
         onOpenChange={(next) => {
           if (!next) setOpenChallengeId(null)
+        }}
+      />
+
+      <MarkConfirmDialog
+        open={pendingCell !== null}
+        onOpenChange={(next) => {
+          if (!next) setPendingCell(null)
+        }}
+        text={pendingCell?.text ?? null}
+        imagePath={pendingCell?.imagePath}
+        onConfirm={() => {
+          if (pendingCell) applyMark(pendingCell, true)
+          setPendingCell(null)
         }}
       />
     </div>

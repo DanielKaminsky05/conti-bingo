@@ -11,6 +11,7 @@ import { publicStorageUrl } from "@/lib/storage-url"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TileMedia, FreeSpaceContent } from "@/components/bingo/tile-media"
+import { MarkConfirmDialog } from "@/components/bingo/mark-confirm-dialog"
 import { cn } from "@/lib/utils"
 
 type Challenge = { id: string; text: string | null; imagePath?: string | null }
@@ -56,6 +57,7 @@ export function CoopBoard({
   const [error, setError] = useState<string | null>(null)
   const [, startTransition] = useTransition()
   const [burst, setBurst] = useState(false)
+  const [pendingCell, setPendingCell] = useState<CoopCell | null>(null)
 
   const freePos = card.free_space ? freeSpacePosition(card.grid_size) : null
 
@@ -174,13 +176,8 @@ export function CoopBoard({
     prevRemaining.current = cells ? remaining : null
   }, [remaining, total, cells, triggerCelebration])
 
-  function toggle(cell: CoopCell) {
+  function applyMark(cell: CoopCell, next: boolean) {
     if (!boardId) return
-    if (cell.position === freePos) return
-    // Only hosts may mark/unmark; members just watch.
-    if (!canMark) return
-
-    const next = !cell.isMarked
     setCells((prev) =>
       prev
         ? prev.map((c) =>
@@ -204,6 +201,19 @@ export function CoopBoard({
         void loadCells(boardId) // re-sync to the authoritative state
       }
     })
+  }
+
+  function toggle(cell: CoopCell) {
+    if (!boardId) return
+    if (cell.position === freePos) return
+    // Only hosts may mark/unmark; members just watch.
+    if (!canMark) return
+    // Confirm before completing a square; unmarking is a correction (immediate).
+    if (!cell.isMarked) {
+      setPendingCell(cell)
+      return
+    }
+    applyMark(cell, false)
   }
 
   if (error) {
@@ -316,6 +326,19 @@ export function CoopBoard({
           Only hosts can mark squares. Watch the board fill in live!
         </p>
       )}
+
+      <MarkConfirmDialog
+        open={pendingCell !== null}
+        onOpenChange={(next) => {
+          if (!next) setPendingCell(null)
+        }}
+        text={pendingCell?.text ?? null}
+        imagePath={pendingCell?.imagePath}
+        onConfirm={() => {
+          if (pendingCell) applyMark(pendingCell, true)
+          setPendingCell(null)
+        }}
+      />
     </div>
   )
 }
