@@ -17,11 +17,7 @@ import {
   leaveGroup,
   transferOwnership,
 } from "@/lib/actions/groups"
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { AvatarZoom } from "@/components/common/avatar-zoom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -56,15 +52,6 @@ const roleBadge: Record<Role, { label: string; variant: "default" | "secondary" 
 
 function displayName(m: MemberWithProfile): string {
   return m.nickname || m.profile?.name || m.profile?.username || "Member"
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("")
 }
 
 export function MemberList({
@@ -146,10 +133,7 @@ export function MemberList({
             key={m.user_id}
             className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 ring-1 ring-foreground/10"
           >
-            <Avatar>
-              {avatarUrl && <AvatarImage src={avatarUrl} alt={name} />}
-              <AvatarFallback>{initials(name) || "?"}</AvatarFallback>
-            </Avatar>
+            <AvatarZoom src={avatarUrl} name={name} />
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">

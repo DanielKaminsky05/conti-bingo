@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { subscribeToBingos } from "@/lib/realtime/subscriptions"
 import { rankPlayers } from "@/lib/bingo/rank"
 import { publicStorageUrl } from "@/lib/storage-url"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarZoom } from "@/components/common/avatar-zoom"
 import {
   PlayerCardDialog,
   type ViewableCard,
@@ -129,12 +129,7 @@ export function Leaderboard({
               )}
             </div>
 
-            <Avatar size="sm">
-              {avatarUrl ? (
-                <AvatarImage src={avatarUrl} alt="" />
-              ) : null}
-              <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
-            </Avatar>
+            <AvatarZoom src={avatarUrl} name={displayName} size="sm" />
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { subscribeToCoopCells } from "@/lib/realtime/subscriptions"
 import { publicStorageUrl } from "@/lib/storage-url"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarZoom } from "@/components/common/avatar-zoom"
 import type { CoopContributionRow } from "@/lib/bingo/coop-standings"
 
 /**
@@ -81,10 +81,7 @@ export function CoopStandings({
                 <span className="w-5 shrink-0 text-center text-sm font-semibold text-muted-foreground tabular-nums">
                   {i + 1}
                 </span>
-                <Avatar size="sm">
-                  {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
-                  <AvatarFallback>{(r.name ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <AvatarZoom src={avatarUrl} name={r.name ?? "Member"} size="sm" />
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">
                   {r.name ?? "Member"}
                   {isMe && <span className="ml-1.5 text-xs text-primary">(you)</span>}
