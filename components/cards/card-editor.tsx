@@ -366,12 +366,12 @@ export function CardEditor({
         <Tabs value={gameMode} onValueChange={(v) => setGameMode(v as GameMode)}>
           <TabsList>
             <TabsTrigger value="individual">Individual</TabsTrigger>
-            <TabsTrigger value="coop">Group co-op</TabsTrigger>
+            <TabsTrigger value="coop">Class card</TabsTrigger>
           </TabsList>
         </Tabs>
         <p className="text-xs text-muted-foreground">
           {coop
-            ? "The whole group shares ONE board and fills every square together (blackout). Only hosts (owner/admins) can mark squares; everyone sees the shared progress live."
+            ? "The whole class shares ONE board and fills every square together (blackout). Only hosts (owner/admins) can mark squares; everyone sees the shared progress live."
             : "Every player gets their own card and competes on the leaderboard."}
         </p>
       </div>

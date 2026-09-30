@@ -65,9 +65,9 @@ export default async function GroupPlayPage({
       <div className="space-y-6">
         <section>
           <h2 className="mb-1 font-heading text-lg font-semibold">{card.title}</h2>
-          <p className="mb-3 text-sm text-muted-foreground">
-            {card.description ?? "Fill every square together — it's a group effort."}
-          </p>
+          {card.description && (
+            <p className="mb-3 text-sm text-muted-foreground">{card.description}</p>
+          )}
           <CoopBoard
             card={{
               id: card.id,

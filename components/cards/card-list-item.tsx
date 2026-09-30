@@ -52,7 +52,7 @@ export function CardListItem({
           {card.game_mode === "coop" && (
             <Badge variant="outline" className="gap-1">
               <UsersIcon className="size-3" />
-              Co-op
+              Class
             </Badge>
           )}
         </div>
