@@ -160,10 +160,10 @@ image-only, or text-over-image (rendered with a legibility scrim).
 **Group co-op ("group bingo").** A card is authored as `game_mode` `individual`
 (default) or `coop`. A co-op card is always an *identical* layout won by
 *blackout*: the whole group shares ONE board (`coop_boards`, one per card) whose
-squares (`coop_board_cells`) **only hosts (owner/admin) may mark or unmark**
-(migration 16 — RLS `is_group_admin`); regular members watch the board fill live.
-Hosts have full control (any host may unmark any square). `marked_by` records
-which host marked each square, powering a **contributions leaderboard** (rank by
+squares (`coop_board_cells`) **any member may mark**. A member may unmark only
+their own square (marker-lock); **hosts (owner/admin) may unmark any square**
+(migration 18 — superseding the briefly host-only migration 16). `marked_by`
+records who marked each square, powering a **contributions leaderboard** (rank by
 squares → points → earliest mark). Blackout
 is detected by a trigger that sets/clears `coop_boards.completed_at` (revocable,
 per D4). The board is created + seeded lazily and idempotently by the

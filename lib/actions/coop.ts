@@ -38,10 +38,10 @@ export async function getOrCreateCoopBoard(
 }
 
 /**
- * Mark/unmark a square on the shared board. RLS enforces the co-op rule: only
- * group HOSTS (owner/admin) may write; regular members just watch. `marked_by`
- * records which host marked each square (contributions leaderboard). The
- * blackout trigger updates `coop_boards.completed_at`.
+ * Mark/unmark a square on the shared board. RLS enforces the co-op rule: any
+ * member may mark an unclaimed square and unmark their own; hosts (owner/admin)
+ * may unmark anyone's. `marked_by` records who marked each square (contributions
+ * leaderboard). The blackout trigger updates `coop_boards.completed_at`.
  */
 export async function markCoopCell(input: unknown): Promise<ActionResult<null>> {
   return withResult(async () => {
@@ -72,9 +72,12 @@ export async function markCoopCell(input: unknown): Promise<ActionResult<null>> 
       .select('id')
 
     if (error) throw new ActionError('error', error.message)
-    // RLS returns zero rows when the caller isn't a host of the board's group.
+    // RLS returns zero rows when a member tries to unmark someone else's square.
     if (!data || data.length === 0) {
-      throw new ActionError('forbidden', 'Only hosts can mark squares on a co-op board.')
+      throw new ActionError(
+        'forbidden',
+        marked ? 'That square is already taken.' : 'You can only unmark squares you marked.'
+      )
     }
 
     // Play hub lives at the group route; the card id maps 1:1 to a group card.

@@ -13,7 +13,8 @@ import {
  *
  * Verifies:
  *   - get_or_create_coop_board seeds one shared board (idempotent)
- *   - a regular member CANNOT mark; a host (owner/admin) can mark and unmark
+ *   - any member can mark an unclaimed square + unmark their own; a member
+ *     CANNOT unmark someone else's; a host can unmark anyone's (migration 18)
  *   - marking every cell sets coop_boards.completed_at; unmarking one clears it
  *   - a non-member can neither read nor mark the board
  *
@@ -91,42 +92,62 @@ describe.skipIf(!hasServiceRole)('co-op bingo (integration)', () => {
     expect(count).toBe(16)
   })
 
-  it('lets a host mark/unmark but blocks a regular member', async () => {
+  it('lets any member mark + unmark their own, blocks unmarking others, hosts override', async () => {
     const { owner, member, cardId } = await setup()
     const { data: boardId } = await member.client.rpc('get_or_create_coop_board', {
       p_card_id: cardId,
     })
 
-    // A regular member cannot mark → RLS hides the row (0 updated).
-    const { data: blocked, error: bErr } = await member.client
+    // A regular member CAN mark an unclaimed square.
+    const { data: marked, error: mErr } = await member.client
       .from('coop_board_cells')
       .update({ is_marked: true, marked_by: member.id, marked_at: new Date().toISOString() })
-      .eq('board_id', boardId as string)
-      .eq('position', 0)
-      .select('id')
-    expect(bErr).toBeNull()
-    expect(blocked ?? []).toHaveLength(0)
-
-    // The owner (host) can mark it.
-    const { data: marked, error: mErr } = await owner.client
-      .from('coop_board_cells')
-      .update({ is_marked: true, marked_by: owner.id, marked_at: new Date().toISOString() })
       .eq('board_id', boardId as string)
       .eq('position', 0)
       .select('marked_by')
     expect(mErr, mErr?.message).toBeNull()
     expect(marked).toHaveLength(1)
-    expect(marked![0].marked_by).toBe(owner.id)
+    expect(marked![0].marked_by).toBe(member.id)
 
-    // ...and unmark it (hosts have full control).
-    const { data: unmarked, error: uErr } = await owner.client
+    // The owner marks a different square.
+    await owner.client
+      .from('coop_board_cells')
+      .update({ is_marked: true, marked_by: owner.id, marked_at: new Date().toISOString() })
+      .eq('board_id', boardId as string)
+      .eq('position', 1)
+
+    // The member CANNOT unmark the owner's square → RLS hides the row.
+    const { data: stolen, error: sErr } = await member.client
+      .from('coop_board_cells')
+      .update({ is_marked: false, marked_by: null, marked_at: null })
+      .eq('board_id', boardId as string)
+      .eq('position', 1)
+      .select('id')
+    expect(sErr).toBeNull()
+    expect(stolen ?? []).toHaveLength(0)
+
+    // The member CAN unmark their own square.
+    const { data: ownUnmark } = await member.client
       .from('coop_board_cells')
       .update({ is_marked: false, marked_by: null, marked_at: null })
       .eq('board_id', boardId as string)
       .eq('position', 0)
       .select('id')
-    expect(uErr, uErr?.message).toBeNull()
-    expect(unmarked).toHaveLength(1)
+    expect(ownUnmark).toHaveLength(1)
+
+    // A host CAN unmark anyone's square (the member re-marks 0 first).
+    await member.client
+      .from('coop_board_cells')
+      .update({ is_marked: true, marked_by: member.id, marked_at: new Date().toISOString() })
+      .eq('board_id', boardId as string)
+      .eq('position', 0)
+    const { data: hostUnmark } = await owner.client
+      .from('coop_board_cells')
+      .update({ is_marked: false, marked_by: null, marked_at: null })
+      .eq('board_id', boardId as string)
+      .eq('position', 0)
+      .select('id')
+    expect(hostUnmark).toHaveLength(1)
   })
 
   it('sets completed_at on blackout and clears it when a square is unmarked', async () => {

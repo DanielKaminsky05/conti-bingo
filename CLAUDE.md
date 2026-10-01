@@ -131,7 +131,7 @@ auth.users → profiles (username, name, avatar_path)
           │   ├ player_card_cells (position, challenge_id nullable=free, is_marked)
           │   └ bingos (line|blackout, line_key; REVOCABLE)
           └ coop_boards (COOP mode; ONE shared board per card; completed_at REVOCABLE)
-              └ coop_board_cells (position, challenge_id nullable=free, is_marked, marked_by = host contributor; HOST-ONLY marking)
+              └ coop_board_cells (position, challenge_id nullable=free, is_marked, marked_by = contributor; any member marks, marker-lock on unmark, hosts override)
   └ notifications (recipient)
 Storage: avatars/{user_id}/… · group-images/{group_id}/…  (RLS-guarded)
 ```
@@ -155,7 +155,7 @@ and `SUPABASE_SERVICE_ROLE_KEY` (integration tests only — never commit the rea
 
 ## Key decisions (`docs/decisions.md`)
 
-- **D1** Leaderboard = `security_invoker` view. **D2** Reads via Data API (RLS) + Realtime; writes only via Server Actions. **D3** Email + password with email confirmation, **no 2FA**. **D4** Bingos are **revocable** (trigger inserts and deletes). **D5** Cards editable anytime — a single challenge-text edit un-completes only that square across players (trigger revokes dependent bingos); grid/layout changes rebuild player cards. **D6** Free space only on odd grids (5×5). **D7** Enriched model — roles/co-hosts, invites, notifications, drafts/scheduling/weighted points, avatars/group images. Activity feed + reactions deferred. **D8** Per-square images (nullable `challenges.text`/`image_path`) + **group co-op mode** (`cards.game_mode`): one shared `coop_boards`/`coop_board_cells` board filled by blackout, **host-only marking** (owner/admin; migration 16), `marked_by` = contributions leaderboard; kept separate from the individual-play tables.
+- **D1** Leaderboard = `security_invoker` view. **D2** Reads via Data API (RLS) + Realtime; writes only via Server Actions. **D3** Email + password with email confirmation, **no 2FA**. **D4** Bingos are **revocable** (trigger inserts and deletes). **D5** Cards editable anytime — a single challenge-text edit un-completes only that square across players (trigger revokes dependent bingos); grid/layout changes rebuild player cards. **D6** Free space only on odd grids (5×5). **D7** Enriched model — roles/co-hosts, invites, notifications, drafts/scheduling/weighted points, avatars/group images. Activity feed + reactions deferred. **D8** Per-square images (nullable `challenges.text`/`image_path`) + **group co-op mode** (`cards.game_mode`): one shared `coop_boards`/`coop_board_cells` board filled by blackout, **any member marks** (marker-lock on unmark; hosts override — migration 18), `marked_by` = contributions leaderboard; kept separate from the individual-play tables.
 
 ## Documentation map (`docs/` — the authoritative spec)
 

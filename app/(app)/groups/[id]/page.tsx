@@ -71,7 +71,7 @@ export default async function GroupPlayPage({
               challenges,
             }}
             currentUserId={user?.id ?? null}
-            canMark={isHost(role)}
+            isHost={isHost(role)}
           />
         </section>
       </div>

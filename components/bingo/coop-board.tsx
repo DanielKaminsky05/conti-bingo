@@ -45,12 +45,13 @@ const GRID_COLS: Record<number, string> = {
 export function CoopBoard({
   card,
   currentUserId,
-  canMark,
+  isHost,
 }: {
   card: CoopBoardCard
   currentUserId: string | null
-  /** Only group hosts (owner/admin) may mark/unmark; members watch live. */
-  canMark: boolean
+  /** Hosts (owner/admin) can unmark ANY square; members can only unmark their
+      own. Everyone can mark an unclaimed square. */
+  isHost: boolean
 }) {
   const [boardId, setBoardId] = useState<string | null>(null)
   const [cells, setCells] = useState<CoopCell[] | null>(null)
@@ -206,14 +207,19 @@ export function CoopBoard({
   function toggle(cell: CoopCell) {
     if (!boardId) return
     if (cell.position === freePos) return
-    // Only hosts may mark/unmark; members just watch.
-    if (!canMark) return
-    // Confirm before completing a square; unmarking is a correction (immediate).
-    if (!cell.isMarked) {
-      setPendingCell(cell)
+
+    if (cell.isMarked) {
+      // Unmarking: only the marker (or a host) may undo a square.
+      const mine = cell.markedBy === currentUserId
+      if (!mine && !isHost) {
+        toast.info(`${cell.markerName ?? "Someone"} already got this one.`)
+        return
+      }
+      applyMark(cell, false)
       return
     }
-    applyMark(cell, false)
+    // Completing a square asks for confirmation first (prevents stray taps).
+    setPendingCell(cell)
   }
 
   if (error) {
@@ -241,8 +247,11 @@ export function CoopBoard({
         {cells.map((cell) => {
           const isFree = cell.position === freePos
           const avatarUrl = publicStorageUrl("avatars", cell.markerAvatar)
-          // Members can't interact; hosts can toggle any square.
-          const interactive = canMark && !isFree
+          const mine = cell.markedBy === currentUserId
+          // Everyone can mark an unclaimed square; a claimed square can only be
+          // toggled by its marker (or a host). Locked = someone else's square.
+          const lockedByOther = cell.isMarked && !mine && !isHost
+          const interactive = !isFree && !lockedByOther
 
           return (
             <button
@@ -261,7 +270,7 @@ export function CoopBoard({
                     ? "bg-marked text-marked-foreground shadow-sm"
                     : "bg-card border border-tile-border text-foreground",
                 interactive && !cell.isMarked && "hover:border-muted-foreground/40 active:scale-95",
-                !interactive && "cursor-default"
+                lockedByOther && "cursor-not-allowed"
               )}
             >
               {!isFree && <TileMedia imagePath={cell.imagePath} hasText={!!cell.text} />}
@@ -320,12 +329,6 @@ export function CoopBoard({
           <span className="text-primary"> · blackout complete! 🎉</span>
         )}
       </p>
-
-      {!canMark && (
-        <p className="text-center text-xs text-muted-foreground">
-          Only hosts can mark squares. Watch the board fill in live!
-        </p>
-      )}
 
       <MarkConfirmDialog
         open={pendingCell !== null}
