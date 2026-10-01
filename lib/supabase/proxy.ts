@@ -51,7 +51,8 @@ export async function updateSession(request: NextRequest) {
     path.startsWith('/forgot-password') ||
     path.startsWith('/reset-password') ||
     path.startsWith('/auth') ||
-    path.startsWith('/invite')
+    path.startsWith('/invite') ||
+    path.startsWith('/terms')
 
   // Expose the pathname to Server Components (layouts can't read it directly in
   // App Router). The (auth) layout uses this to allow /reset-password to render
