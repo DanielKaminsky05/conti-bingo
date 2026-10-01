@@ -4,7 +4,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export const metadata = {
-  title: "Terms of Service · Conti-Bingo",
+  title: "Terms of Service · Contibingo",
 }
 
 const LAST_UPDATED = "September 30, 2026"
@@ -27,15 +27,15 @@ export default function TermsPage() {
         <section className="space-y-2">
           <h2 className="font-heading text-base font-semibold">1. Acceptance</h2>
           <p>
-            By creating an account or using Conti-Bingo (the &ldquo;Service&rdquo;), you agree to
+            By creating an account or using Contibingo (the &ldquo;Service&rdquo;), you agree to
             these Terms of Service. If you don&rsquo;t agree, don&rsquo;t use the Service.
           </p>
         </section>
 
         <section className="space-y-2">
-          <h2 className="font-heading text-base font-semibold">2. What Conti-Bingo is</h2>
+          <h2 className="font-heading text-base font-semibold">2. What Contibingo is</h2>
           <p>
-            Conti-Bingo is an unofficial, student-run game for business-school sections. Groups
+            Contibingo is an unofficial, student-run game for business-school sections. Groups
             create bingo cards of light-hearted classroom challenges and players (or a whole
             class) mark squares as they go. It&rsquo;s meant for fun.
           </p>
@@ -44,7 +44,7 @@ export default function TermsPage() {
         <section className="space-y-2">
           <h2 className="font-heading text-base font-semibold">3. Not affiliated with your school</h2>
           <p>
-            Conti-Bingo is not created, endorsed, or sponsored by Ivey Business School, Western
+            Contibingo is not created, endorsed, or sponsored by Ivey Business School, Western
             University, or any institution. It is an independent, unofficial project. Nothing here
             is an official school activity.
           </p>
@@ -135,7 +135,14 @@ export default function TermsPage() {
           <h2 className="font-heading text-base font-semibold">12. Contact</h2>
           <p>
             Questions about these Terms? Reach out to the group host or the person who runs your
-            section&rsquo;s Conti-Bingo.
+            section&rsquo;s Contibingo.
+          </p>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="font-heading text-base font-semibold">13. Dels</h2>
+          <p>
+            You are now legally obligated to buy Daniel Kaminsky a drink of your choice at Delilahs every Thursday.
           </p>
         </section>
       </div>
