@@ -94,7 +94,7 @@ export const createCardSchema = z
     gridSize: gridSizeSchema,
     layoutMode: layoutModeSchema,
     freeSpace: z.boolean(),
-    freeSpaceImagePath: z.string().trim().max(500, 'Image path is too long.').optional(),
+    freeSpaceImagePath: z.string().trim().max(500, 'Image path is too long.').nullable().optional(),
     winCondition: winConditionSchema.default('line'),
     gameMode: gameModeSchema.default('individual'),
     startsAt: z.string().datetime({ message: 'Start time must be a valid date-time.' }).optional(),

@@ -223,3 +223,18 @@ describe('createCardSchema — schedule (endsAt > startsAt)', () => {
     expect(res.success).toBe(true)
   })
 })
+
+describe('createCardSchema — freeSpaceImagePath', () => {
+  // The editor sends `null` to clear the image whenever there's no free space.
+  it('accepts null (no free space)', () => {
+    const res = createCardSchema.safeParse(
+      validInput({ freeSpace: false, freeSpaceImagePath: null, challenges: challenges(25) }),
+    )
+    expect(res.success).toBe(true)
+  })
+
+  it('accepts a storage path', () => {
+    const res = createCardSchema.safeParse(validInput({ freeSpaceImagePath: 'g/free.png' }))
+    expect(res.success).toBe(true)
+  })
+})
