@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { Loader2Icon } from "lucide-react"
 import { toast } from "sonner"
 import { uploadAvatar, removeAvatar } from "@/lib/actions/profile"
 import { publicStorageUrl } from "@/lib/storage-url"
@@ -92,10 +93,21 @@ export function AvatarUploader({ profile }: { profile: Tables<"profiles"> }) {
 
   return (
     <div className="flex items-center gap-4">
-      <Avatar size="lg" className="size-16">
-        {shownUrl && <AvatarImage src={shownUrl} alt="Your avatar" />}
-        <AvatarFallback className="text-base">{initialsOf(profile)}</AvatarFallback>
-      </Avatar>
+      <div className="relative shrink-0">
+        <Avatar size="lg" className="size-16">
+          {shownUrl && <AvatarImage src={shownUrl} alt="Your avatar" />}
+          <AvatarFallback className="text-base">{initialsOf(profile)}</AvatarFallback>
+        </Avatar>
+        {pending && (
+          <span
+            role="status"
+            aria-label="Updating photo"
+            className="absolute inset-0 grid place-items-center rounded-full bg-background/60"
+          >
+            <Loader2Icon className="size-5 animate-spin text-foreground" />
+          </span>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <input

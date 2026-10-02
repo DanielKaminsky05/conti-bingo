@@ -9,6 +9,7 @@ import {
   PlusIcon,
   ImageIcon,
   Trash2Icon,
+  Loader2Icon,
 } from "lucide-react"
 import { toast } from "sonner"
 import { createCard, updateCard, publishCard, uploadChallengeImage } from "@/lib/actions/cards"
@@ -69,6 +70,18 @@ function resize(list: ChallengeDraft[], len: number): ChallengeDraft[] {
     return [...list, ...Array.from({ length: len - list.length }, emptyChallenge)]
   }
   return list.slice(0, len)
+}
+
+/** Stand-in for an image preview while its upload is in flight. */
+function UploadingImage() {
+  return (
+    <div role="status" className="flex items-center gap-3">
+      <span className="grid size-16 shrink-0 place-items-center rounded-lg border border-tile-border bg-muted/40">
+        <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+      </span>
+      <span className="text-sm text-muted-foreground">Uploading image…</span>
+    </div>
+  )
 }
 
 function isoToLocalInput(iso: string | null): string {
@@ -450,7 +463,9 @@ export function CardEditor({
         {effectiveFreeSpace && (
           <div className="space-y-2 rounded-xl border border-border bg-card px-4 py-3">
             <Label>Free-space image (optional)</Label>
-            {freeSpaceImagePath ? (
+            {uploading ? (
+              <UploadingImage />
+            ) : freeSpaceImagePath ? (
               <div className="flex items-center gap-3">
                 <span className="relative size-16 shrink-0 overflow-hidden rounded-lg border border-tile-border">
                   <TileMedia imagePath={freeSpaceImagePath} hasText={false} />
@@ -477,7 +492,6 @@ export function CardEditor({
                 />
               </div>
             )}
-            {uploading && <p className="text-xs text-muted-foreground">Uploading image…</p>}
           </div>
         )}
       </div>
@@ -668,7 +682,9 @@ export function CardEditor({
               {/* Background image (optional) — text overlays it when both are set. */}
               <div className="space-y-2">
                 <Label>Image (optional)</Label>
-                {current.imagePath ? (
+                {uploading ? (
+                  <UploadingImage />
+                ) : current.imagePath ? (
                   <div className="flex items-center gap-3">
                     <span className="relative size-16 shrink-0 overflow-hidden rounded-lg border border-tile-border">
                       <TileMedia imagePath={current.imagePath} hasText={false} />
@@ -694,9 +710,6 @@ export function CardEditor({
                       onChange={(e) => onPickTileImage(editing, e.target.files?.[0] ?? null)}
                     />
                   </div>
-                )}
-                {uploading && (
-                  <p className="text-xs text-muted-foreground">Uploading image…</p>
                 )}
               </div>
 
