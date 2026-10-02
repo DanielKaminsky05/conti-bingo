@@ -92,13 +92,19 @@ export function CardEditor({
   groupId,
   mode,
   initial,
+  live = false,
   showPublish = false,
+  replacingTitle,
   returnHref,
 }: {
   groupId: string
   mode: "create" | "edit"
   initial?: CardEditorInitial
+  /** Editing the group's ACTIVE card in place — players already have marks. */
+  live?: boolean
   showPublish?: boolean
+  /** Title of the current active card, which publishing this one will archive. */
+  replacingTitle?: string
   /** Where to navigate after a successful save/publish. Defaults to the group's
       card management page. */
   returnHref?: string
@@ -148,7 +154,7 @@ export function CardEditor({
   const filledCount = challenges.filter(
     (c) => c.text.trim().length > 0 || !!c.imagePath
   ).length
-  const structuralWarning = mode === "edit"
+  const structuralWarning = mode === "edit" && live
   const gridSizes: GridSize[] = useMemo(() => [4, 5, 6], [])
 
   function setGrid(size: GridSize) {
@@ -326,8 +332,19 @@ export function CardEditor({
         <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm">
           <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-gold" />
           <p className="text-muted-foreground">
-            Changing the grid size, layout, free space, or the set of challenges will rebuild every
-            player&apos;s card and reset their marks.
+            This card is live. Editing a square&apos;s text or image un-marks just that square for
+            everyone; changing the game mode, grid size, layout, free space, or number of challenges
+            rebuilds every player&apos;s card and resets their marks.
+          </p>
+        </div>
+      )}
+      {replacingTitle && (showPublish || mode === "create") && (
+        <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm">
+          <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-gold" />
+          <p className="text-muted-foreground">
+            Publishing this card archives the current card,{" "}
+            <span className="font-medium text-foreground">{replacingTitle}</span>. Its results stay
+            viewable in the archive. To tweak the current card instead, edit it.
           </p>
         </div>
       )}

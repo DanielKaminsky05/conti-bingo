@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { ArrowLeftIcon } from "lucide-react"
+import { getActiveCard } from "@/lib/queries/cards"
 import { CardEditor } from "@/components/cards/card-editor"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -12,6 +13,7 @@ export default async function NewCardPage({
 }) {
   const { id } = await params
   const manageCards = `/groups/${id}/manage/cards`
+  const active = await getActiveCard(id)
 
   return (
     <div className="space-y-6">
@@ -25,7 +27,12 @@ export default async function NewCardPage({
         </Link>
         <h3 className="font-heading text-base font-semibold">New card</h3>
       </div>
-      <CardEditor groupId={id} mode="create" returnHref={manageCards} />
+      <CardEditor
+        groupId={id}
+        mode="create"
+        replacingTitle={active?.title}
+        returnHref={manageCards}
+      />
     </div>
   )
 }

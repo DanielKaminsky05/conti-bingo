@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { PlusIcon, LayoutGridIcon, FileEditIcon, RefreshCwIcon } from "lucide-react"
+import { PlusIcon, LayoutGridIcon, FileEditIcon, PencilIcon } from "lucide-react"
 import { getActiveCard, listDraftCards } from "@/lib/queries/cards"
 import { buttonVariants } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/empty-state"
@@ -32,11 +32,11 @@ export default async function ManageCardsPage({
           <h4 className="text-sm font-medium text-muted-foreground">Active</h4>
           {active && (
             <Link
-              href={`${manageBase}/new`}
+              href={`${manageBase}/${active.id}`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
-              <RefreshCwIcon />
-              Replace
+              <PencilIcon />
+              Edit
             </Link>
           )}
         </div>

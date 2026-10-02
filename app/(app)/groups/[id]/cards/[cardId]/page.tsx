@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeftIcon, CalendarIcon, RefreshCwIcon } from "lucide-react"
+import { ArrowLeftIcon, CalendarIcon, PencilIcon } from "lucide-react"
 import { getCard } from "@/lib/queries/cards"
 import { getLeaderboard } from "@/lib/queries/leaderboard"
 import { getCoopProgress, getCoopStandings } from "@/lib/queries/coop"
@@ -85,11 +85,11 @@ export default async function CardDetailPage({
           </div>
           {host && card.status === "active" && (
             <Link
-              href={`/groups/${id}/manage/cards/new`}
+              href={`/groups/${id}/manage/cards/${card.id}`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
-              <RefreshCwIcon />
-              Replace
+              <PencilIcon />
+              Edit
             </Link>
           )}
         </div>
