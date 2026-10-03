@@ -11,7 +11,7 @@ import { publicStorageUrl } from "@/lib/storage-url"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TileMedia, FreeSpaceContent } from "@/components/bingo/tile-media"
-import { MarkConfirmDialog } from "@/components/bingo/mark-confirm-dialog"
+import { SquareDialog } from "@/components/bingo/square-dialog"
 import { cn } from "@/lib/utils"
 
 type Challenge = { id: string; text: string | null; imagePath?: string | null }
@@ -61,7 +61,7 @@ export function CoopBoard({
   const [error, setError] = useState<string | null>(null)
   const [, startTransition] = useTransition()
   const [burst, setBurst] = useState(false)
-  const [pendingCell, setPendingCell] = useState<CoopCell | null>(null)
+  const [openCell, setOpenCell] = useState<CoopCell | null>(null)
 
   const freePos = card.free_space ? freeSpacePosition(card.grid_size) : null
 
@@ -207,26 +207,12 @@ export function CoopBoard({
     })
   }
 
-  function toggle(cell: CoopCell) {
+  // Tapping a tile opens its detail — the full challenge is always readable,
+  // with a mark/unmark action when the rules + schedule allow it.
+  function openSquare(cell: CoopCell) {
     if (!boardId) return
     if (cell.position === freePos) return
-    if (markingClosed) {
-      toast.info("This card has ended.")
-      return
-    }
-
-    if (cell.isMarked) {
-      // Unmarking: only the marker (or a host) may undo a square.
-      const mine = cell.markedBy === currentUserId
-      if (!mine && !isHost) {
-        toast.info(`${cell.markerName ?? "Someone"} already got this one.`)
-        return
-      }
-      applyMark(cell, false)
-      return
-    }
-    // Completing a square asks for confirmation first (prevents stray taps).
-    setPendingCell(cell)
+    setOpenCell(cell)
   }
 
   if (error) {
@@ -238,6 +224,22 @@ export function CoopBoard({
   }
 
   if (!cells) return <CoopSkeleton gridSize={card.grid_size} />
+
+  // Detail dialog for the open square: view-only when marking isn't allowed
+  // (closed window, or a square claimed by someone else), else a mark/unmark action.
+  const openMine = openCell?.markedBy === currentUserId
+  const openLockedByOther = !!openCell?.isMarked && !openMine && !isHost
+  const dialogCanAct = !!openCell && !markingClosed && !openLockedByOther
+  const dialogTitle = dialogCanAct
+    ? openCell?.isMarked
+      ? "Unmark this square?"
+      : "Mark this square?"
+    : "Challenge"
+  const dialogNote = markingClosed
+    ? "Marking is closed."
+    : openLockedByOther
+      ? `Marked by ${openCell?.markerName ?? "someone else"}.`
+      : null
 
   return (
     <div className="relative mx-auto w-full max-w-md space-y-3">
@@ -264,8 +266,8 @@ export function CoopBoard({
             <button
               key={cell.position}
               type="button"
-              onClick={() => toggle(cell)}
-              disabled={!interactive}
+              onClick={() => openSquare(cell)}
+              disabled={isFree}
               aria-pressed={cell.isMarked}
               aria-label={isFree ? "Free space" : cell.text ?? "Square"}
               className={cn(
@@ -276,8 +278,7 @@ export function CoopBoard({
                   : cell.isMarked
                     ? "bg-marked text-marked-foreground shadow-sm"
                     : "bg-card border border-tile-border text-foreground",
-                interactive && !cell.isMarked && "hover:border-muted-foreground/40 active:scale-95",
-                lockedByOther && "cursor-not-allowed"
+                interactive && !cell.isMarked && "hover:border-muted-foreground/40 active:scale-95"
               )}
             >
               {!isFree && <TileMedia imagePath={cell.imagePath} hasText={!!cell.text} />}
@@ -337,17 +338,26 @@ export function CoopBoard({
         )}
       </p>
 
-      <MarkConfirmDialog
-        open={pendingCell !== null}
+      <SquareDialog
+        open={openCell !== null}
         onOpenChange={(next) => {
-          if (!next) setPendingCell(null)
+          if (!next) setOpenCell(null)
         }}
-        text={pendingCell?.text ?? null}
-        imagePath={pendingCell?.imagePath}
-        onConfirm={() => {
-          if (pendingCell) applyMark(pendingCell, true)
-          setPendingCell(null)
-        }}
+        title={dialogTitle}
+        text={openCell?.text ?? null}
+        imagePath={openCell?.imagePath}
+        note={dialogNote}
+        action={
+          dialogCanAct && openCell
+            ? {
+                label: openCell.isMarked ? "Unmark" : "Mark it",
+                onConfirm: () => {
+                  applyMark(openCell, !openCell.isMarked)
+                  setOpenCell(null)
+                },
+              }
+            : undefined
+        }
       />
     </div>
   )

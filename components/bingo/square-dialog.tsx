@@ -12,24 +12,28 @@ import { Button } from "@/components/ui/button"
 import { publicStorageUrl } from "@/lib/storage-url"
 
 /**
- * Confirmation shown before marking (completing) a square, so a stray tap can't
- * accidentally claim one. Shows the challenge's image and/or text. Unmarking
- * doesn't route through here — only completing does.
+ * Shows a square's full challenge (image and/or untruncated text) when a tile is
+ * tapped — so long challenges are always readable even though the grid tile
+ * clamps them. When marking is allowed, an action button (Mark / Unmark) is
+ * shown; otherwise it's a read-only view with an optional note (e.g. "Marking is
+ * closed."). This also serves as the confirm-before-marking step.
  */
-export function MarkConfirmDialog({
+export function SquareDialog({
   open,
   onOpenChange,
+  title,
   text,
   imagePath,
-  onConfirm,
-  pending = false,
+  action,
+  note,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  title: string
   text: string | null
   imagePath: string | null | undefined
-  onConfirm: () => void
-  pending?: boolean
+  action?: { label: string; onConfirm: () => void }
+  note?: string | null
 }) {
   const url = publicStorageUrl("group-images", imagePath)
 
@@ -37,7 +41,7 @@ export function MarkConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Mark this square?</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-3 text-center">
@@ -49,14 +53,20 @@ export function MarkConfirmDialog({
               className="size-40 max-w-full rounded-xl object-cover ring-1 ring-foreground/10"
             />
           )}
-          {text && <p className="text-base font-medium text-balance">{text}</p>}
+          {text ? (
+            <p className="text-base font-medium text-balance">{text}</p>
+          ) : (
+            !url && <p className="text-sm text-muted-foreground">No description.</p>
+          )}
         </div>
 
+        {note && <p className="text-center text-sm text-muted-foreground">{note}</p>}
+
         <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-          <Button disabled={pending} onClick={onConfirm}>
-            Mark it
-          </Button>
+          <DialogClose render={<Button variant="outline" />}>
+            {action ? "Cancel" : "Close"}
+          </DialogClose>
+          {action && <Button onClick={action.onConfirm}>{action.label}</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>
