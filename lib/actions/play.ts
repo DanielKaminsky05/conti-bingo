@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/session'
 import { withResult, ActionError, type ActionResult } from '@/lib/actions/result'
 import { cardIdSchema, markCellSchema } from '@/lib/validation/play'
+import { assertMarkingOpen } from '@/lib/actions/marking-window'
 import {
   buildIdenticalLayout,
   buildShuffledLayout,
@@ -151,6 +152,20 @@ export async function markCell(input: unknown): Promise<ActionResult<null>> {
     }
     const { playerCardId, position, marked } = parsed.data
 
+    // Resolve the owning card up front — needed for the end-of-schedule gate
+    // and to revalidate the right view.
+    const { data: playerCard } = await supabase
+      .from('player_cards')
+      .select('card_id')
+      .eq('id', playerCardId)
+      .maybeSingle()
+    if (!playerCard) {
+      throw new ActionError('not_found', 'That square is not available to mark.')
+    }
+
+    // Locked once the card's end time passes (hosts exempt — mirrors RLS).
+    await assertMarkingOpen(supabase, playerCard.card_id)
+
     const { data, error } = await supabase
       .from('player_card_cells')
       .update({ is_marked: marked, marked_at: marked ? new Date().toISOString() : null })
@@ -165,17 +180,7 @@ export async function markCell(input: unknown): Promise<ActionResult<null>> {
       throw new ActionError('not_found', 'That square is not available to mark.')
     }
 
-    // Resolve the owning card so the right view revalidates.
-    const { data: playerCard } = await supabase
-      .from('player_cards')
-      .select('card_id')
-      .eq('id', playerCardId)
-      .maybeSingle()
-
-    if (playerCard) {
-      revalidatePath(`/cards/${playerCard.card_id}`)
-    }
-
+    revalidatePath(`/cards/${playerCard.card_id}`)
     return null
   })
 }

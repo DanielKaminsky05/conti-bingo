@@ -37,12 +37,15 @@ export function BingoBoard({
   groupId,
   playerCardId: initialPlayerCardId,
   completions = {},
+  markingClosed = false,
 }: {
   card: BingoBoardCard
   groupId: string
   playerCardId?: string
   /** Per-challenge completion counts + who (load-time snapshot). */
   completions?: ChallengeCompletions
+  /** Card ended + viewer isn't a host → no marking. */
+  markingClosed?: boolean
 }) {
   const [playerCardId, setPlayerCardId] = useState<string | null>(
     initialPlayerCardId ?? null
@@ -153,6 +156,7 @@ export function BingoBoard({
         freeSpacePosition={freePos}
         freeSpaceImagePath={card.free_space_image_path}
         cells={cells}
+        markingClosed={markingClosed}
         onMarkedCountChange={setMarkedCount}
         view={view}
         completions={completions}

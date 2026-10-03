@@ -46,13 +46,18 @@ export function CoopBoard({
   card,
   currentUserId,
   isHost,
+  ended = false,
 }: {
   card: CoopBoardCard
   currentUserId: string | null
   /** Hosts (owner/admin) can unmark ANY square; members can only unmark their
       own. Everyone can mark an unclaimed square. */
   isHost: boolean
+  /** Card's end time has passed — only hosts may still mark. */
+  ended?: boolean
 }) {
+  // Past the end time, marking is closed for everyone but hosts.
+  const markingClosed = ended && !isHost
   const [boardId, setBoardId] = useState<string | null>(null)
   const [cells, setCells] = useState<CoopCell[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -207,6 +212,10 @@ export function CoopBoard({
   function toggle(cell: CoopCell) {
     if (!boardId) return
     if (cell.position === freePos) return
+    if (markingClosed) {
+      toast.info("This card has ended.")
+      return
+    }
 
     if (cell.isMarked) {
       // Unmarking: only the marker (or a host) may undo a square.
@@ -251,7 +260,7 @@ export function CoopBoard({
           // Everyone can mark an unclaimed square; a claimed square can only be
           // toggled by its marker (or a host). Locked = someone else's square.
           const lockedByOther = cell.isMarked && !mine && !isHost
-          const interactive = !isFree && !lockedByOther
+          const interactive = !isFree && !lockedByOther && !markingClosed
 
           return (
             <button

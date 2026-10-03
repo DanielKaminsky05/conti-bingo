@@ -59,6 +59,7 @@ export function BingoGrid({
   onMarkedCountChange,
   view = "grid",
   completions = {},
+  markingClosed = false,
 }: {
   playerCardId: string
   cardId: string
@@ -70,6 +71,8 @@ export function BingoGrid({
   view?: ViewMode
   /** Per-challenge completion counts + who (load-time snapshot). */
   completions?: ChallengeCompletions
+  /** Card ended + viewer isn't a host → taps are blocked. */
+  markingClosed?: boolean
 }) {
   const [cells, setCells] = useState<GridCell[]>(initialCells)
   const [, startTransition] = useTransition()
@@ -180,6 +183,10 @@ export function BingoGrid({
 
   function toggle(cell: GridCell) {
     if (cell.position === freeSpacePosition) return // free space is non-interactive
+    if (markingClosed) {
+      toast.info("This card has ended.")
+      return
+    }
     // Completing a square asks for confirmation (prevents stray taps); unmarking
     // is a correction, so it applies immediately.
     if (!cell.isMarked) {
@@ -209,6 +216,7 @@ export function BingoGrid({
                 <button
                   type="button"
                   onClick={() => toggle(cell)}
+                  disabled={markingClosed}
                   aria-pressed={cell.isMarked}
                   aria-label={cell.text ?? "Challenge"}
                   className={cn(
@@ -266,7 +274,7 @@ export function BingoGrid({
               key={cell.position}
               type="button"
               onClick={() => toggle(cell)}
-              disabled={isFree}
+              disabled={isFree || markingClosed}
               aria-pressed={cell.isMarked}
               aria-label={isFree ? "Free space" : cell.text ?? "Challenge"}
               className={cn(

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/session'
 import { ActionError, withResult, type ActionResult } from '@/lib/actions/result'
 import { coopCardIdSchema, markCoopCellSchema } from '@/lib/validation/coop'
+import { assertMarkingOpen } from '@/lib/actions/marking-window'
 
 /**
  * Co-op ("group bingo") mutations. In co-op mode the whole group shares ONE
@@ -52,6 +53,9 @@ export async function markCoopCell(input: unknown): Promise<ActionResult<null>> 
       throw new ActionError('validation', parsed.error.issues[0]?.message ?? 'Invalid input.')
     }
     const { cardId, position, marked } = parsed.data
+
+    // Locked once the card's end time passes (hosts exempt — mirrors RLS).
+    await assertMarkingOpen(supabase, cardId)
 
     // Resolve the board (creates it if this is the group's first interaction).
     const { data: boardId, error: boardError } = await supabase.rpc('get_or_create_coop_board', {

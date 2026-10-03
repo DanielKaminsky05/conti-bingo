@@ -73,6 +73,11 @@ export default async function CardDetailPage({
             <Badge variant={statusVariant}>
               {card.status.charAt(0).toUpperCase() + card.status.slice(1)}
             </Badge>
+            {card.status === "active" &&
+              card.ends_at &&
+              new Date(card.ends_at).getTime() <= Date.now() && (
+                <Badge variant="outline">Ended</Badge>
+              )}
           </div>
           {host && card.status === "active" && (
             <Link

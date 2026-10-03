@@ -188,6 +188,37 @@ describe.skipIf(!hasServiceRole)('co-op bingo (integration)', () => {
     expect(revoked!.completed_at).toBeNull()
   })
 
+  it('locks marking for members once the card has ended (hosts exempt)', async () => {
+    const { owner, member, cardId } = await setup()
+    const { data: boardId } = await member.client.rpc('get_or_create_coop_board', {
+      p_card_id: cardId,
+    })
+
+    // Owner sets the end time to the past (migration 19 gate).
+    await owner.client
+      .from('cards')
+      .update({ ends_at: new Date(Date.now() - 60_000).toISOString() })
+      .eq('id', cardId)
+
+    // A member can no longer mark an unclaimed square.
+    const { data: blocked } = await member.client
+      .from('coop_board_cells')
+      .update({ is_marked: true, marked_by: member.id, marked_at: new Date().toISOString() })
+      .eq('board_id', boardId as string)
+      .eq('position', 0)
+      .select('id')
+    expect(blocked ?? []).toHaveLength(0)
+
+    // A host still can (exempt).
+    const { data: hostMark } = await owner.client
+      .from('coop_board_cells')
+      .update({ is_marked: true, marked_by: owner.id, marked_at: new Date().toISOString() })
+      .eq('board_id', boardId as string)
+      .eq('position', 0)
+      .select('id')
+    expect(hostMark).toHaveLength(1)
+  })
+
   it('blocks a non-member from reading or creating the board', async () => {
     const { cardId } = await setup()
     const outsider = await createTestUser('Outsider')

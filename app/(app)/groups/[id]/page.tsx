@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { BingoBoard } from "@/components/bingo/bingo-board"
 import { CoopBoard } from "@/components/bingo/coop-board"
+import { EndedBanner } from "@/components/bingo/ended-banner"
 
 export default async function GroupPlayPage({
   params,
@@ -52,9 +53,13 @@ export default async function GroupPlayPage({
     imagePath: c.image_path,
   }))
 
+  // Past the end time, marking locks for everyone but hosts.
+  const ended = !!card.ends_at && new Date(card.ends_at).getTime() <= Date.now()
+
   // Co-op: one shared board the whole group fills together (blackout).
   if (card.game_mode === "coop") {
     const [user, role] = await Promise.all([getCurrentUser(), getMyRole(id)])
+    const host = isHost(role)
     return (
       <div className="space-y-6">
         <section>
@@ -62,6 +67,7 @@ export default async function GroupPlayPage({
           {card.description && (
             <p className="mb-3 text-sm text-muted-foreground">{card.description}</p>
           )}
+          {ended && card.ends_at && <EndedBanner endsAt={card.ends_at} isHost={host} />}
           <CoopBoard
             card={{
               id: card.id,
@@ -71,12 +77,15 @@ export default async function GroupPlayPage({
               challenges,
             }}
             currentUserId={user?.id ?? null}
-            isHost={isHost(role)}
+            isHost={host}
+            ended={ended}
           />
         </section>
       </div>
     )
   }
+
+  const host = isHost(await getMyRole(id))
 
   // Per-challenge completion counts (best-effort — never blocks the board).
   // Load-time snapshot; live updates are a follow-up.
@@ -94,6 +103,7 @@ export default async function GroupPlayPage({
         {card.description && (
           <p className="mb-3 text-sm text-muted-foreground">{card.description}</p>
         )}
+        {ended && card.ends_at && <EndedBanner endsAt={card.ends_at} isHost={host} />}
         <BingoBoard
           card={{
             id: card.id,
@@ -105,6 +115,7 @@ export default async function GroupPlayPage({
           }}
           groupId={id}
           completions={completions}
+          markingClosed={ended && !host}
         />
       </section>
     </div>
