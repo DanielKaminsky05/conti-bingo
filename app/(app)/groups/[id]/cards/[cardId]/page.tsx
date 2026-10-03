@@ -9,19 +9,10 @@ import { getCurrentUser } from "@/lib/auth/current-user"
 import { CardChallengesView } from "@/components/cards/card-challenges-view"
 import { Leaderboard, type LeaderboardRow } from "@/components/bingo/leaderboard"
 import { CoopStandings } from "@/components/bingo/coop-standings"
+import { LocalDateTime } from "@/components/common/local-datetime"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
-function formatDateTime(iso: string | null): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  })
-}
 
 export default async function CardDetailPage({
   params,
@@ -63,8 +54,8 @@ export default async function CardDetailPage({
   // Read-only card view for everyone. Draft editing lives in Manage → Cards.
   const statusVariant =
     card.status === "active" ? "default" : card.status === "draft" ? "secondary" : "outline"
-  const start = formatDateTime(card.starts_at)
-  const end = formatDateTime(card.ends_at)
+  const start = card.starts_at
+  const end = card.ends_at
 
   return (
     <div className="space-y-6">
@@ -111,13 +102,13 @@ export default async function CardDetailPage({
           {start && (
             <span>
               <span className="text-muted-foreground">Starts </span>
-              {start}
+              <LocalDateTime iso={start} />
             </span>
           )}
           {end && (
             <span>
               <span className="text-muted-foreground">Ends </span>
-              {end}
+              <LocalDateTime iso={end} />
             </span>
           )}
         </div>
