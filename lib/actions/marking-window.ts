@@ -4,10 +4,10 @@ import { ActionError } from '@/lib/actions/result'
 import { getMyRole, isHost } from '@/lib/queries/membership'
 
 /**
- * Throw a friendly error if a card's end time has passed and the caller isn't a
- * host — mirrors the RLS gate (migration 19) so the UI gets a clear message
- * instead of a generic "not available" when a stale page tries to mark. Cards
- * with no `ends_at` are always open. RLS remains the real enforcement.
+ * Throw a friendly error if the caller tries to mark outside a card's schedule
+ * window and isn't a host — mirrors the RLS gate (migrations 19–20) so the UI
+ * gets a clear message instead of a generic "not available". Null bounds are
+ * open-ended. RLS remains the real enforcement.
  */
 export async function assertMarkingOpen(
   supabase: SupabaseClient<Database>,
@@ -15,15 +15,23 @@ export async function assertMarkingOpen(
 ): Promise<void> {
   const { data: card } = await supabase
     .from('cards')
-    .select('ends_at, group_id')
+    .select('starts_at, ends_at, group_id')
     .eq('id', cardId)
     .maybeSingle()
 
-  if (!card?.ends_at) return
-  if (new Date(card.ends_at).getTime() > Date.now()) return
+  if (!card) return
 
+  const now = Date.now()
+  const beforeStart = !!card.starts_at && new Date(card.starts_at).getTime() > now
+  const afterEnd = !!card.ends_at && new Date(card.ends_at).getTime() <= now
+  if (!beforeStart && !afterEnd) return
+
+  // Hosts can mark any time (set up / finish up).
   const role = await getMyRole(card.group_id)
-  if (!isHost(role)) {
-    throw new ActionError('forbidden', 'This card has ended — marking is closed.')
-  }
+  if (isHost(role)) return
+
+  throw new ActionError(
+    'forbidden',
+    beforeStart ? "This card hasn't started yet." : 'This card has ended — marking is closed.'
+  )
 }

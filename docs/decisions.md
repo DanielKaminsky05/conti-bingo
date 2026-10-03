@@ -170,11 +170,13 @@ per D4). The board is created + seeded lazily and idempotently by the
 `get_or_create_coop_board` SECURITY DEFINER RPC; structural card edits call
 `rebuild_coop_board` (analogous to `rebuild_player_cards`, D5).
 
-**Scheduling (migration 19).** A card's `ends_at` now locks marking: once it
-passes, regular players can no longer mark/unmark on either board; **hosts stay
-exempt** so they can finish up before archiving. Enforced in RLS (the real gate)
-and mirrored in the mark actions for a clear "this card has ended" message, with
-an "Ended" badge + board banner in the UI. `starts_at` remains informational.
+**Scheduling (migrations 19–20).** A card's `starts_at`/`ends_at` now gate
+marking to the window `[starts_at, ends_at)`: regular players can only
+mark/unmark while the card is live; before the start or after the end it's
+locked. **Hosts stay exempt** (set up early, finish up late). Null bounds are
+open-ended. Enforced in RLS (the real gate) and mirrored in the mark actions for
+a clear "hasn't started" / "has ended" message, with Upcoming/Ended badges + a
+board banner in the UI.
 
 **Why:** Deliberately kept SEPARATE from the individual-play tables so
 `player_cards` / `player_card_cells` / `check_bingo` / the `leaderboard` view are

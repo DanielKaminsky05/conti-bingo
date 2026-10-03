@@ -46,18 +46,16 @@ export function CoopBoard({
   card,
   currentUserId,
   isHost,
-  ended = false,
+  markingClosed = false,
 }: {
   card: CoopBoardCard
   currentUserId: string | null
   /** Hosts (owner/admin) can unmark ANY square; members can only unmark their
       own. Everyone can mark an unclaimed square. */
   isHost: boolean
-  /** Card's end time has passed — only hosts may still mark. */
-  ended?: boolean
+  /** Outside the schedule window (and not a host) → no marking. */
+  markingClosed?: boolean
 }) {
-  // Past the end time, marking is closed for everyone but hosts.
-  const markingClosed = ended && !isHost
   const [boardId, setBoardId] = useState<string | null>(null)
   const [cells, setCells] = useState<CoopCell[] | null>(null)
   const [error, setError] = useState<string | null>(null)

@@ -11,7 +11,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { BingoBoard } from "@/components/bingo/bingo-board"
 import { CoopBoard } from "@/components/bingo/coop-board"
-import { EndedBanner } from "@/components/bingo/ended-banner"
+import { MarkingWindowBanner } from "@/components/bingo/marking-window-banner"
 
 export default async function GroupPlayPage({
   params,
@@ -53,8 +53,10 @@ export default async function GroupPlayPage({
     imagePath: c.image_path,
   }))
 
-  // Past the end time, marking locks for everyone but hosts.
-  const ended = !!card.ends_at && new Date(card.ends_at).getTime() <= Date.now()
+  // Outside the schedule window, marking locks for everyone but hosts.
+  const now = Date.now()
+  const notStarted = !!card.starts_at && new Date(card.starts_at).getTime() > now
+  const ended = !!card.ends_at && new Date(card.ends_at).getTime() <= now
 
   // Co-op: one shared board the whole group fills together (blackout).
   if (card.game_mode === "coop") {
@@ -67,7 +69,11 @@ export default async function GroupPlayPage({
           {card.description && (
             <p className="mb-3 text-sm text-muted-foreground">{card.description}</p>
           )}
-          {ended && card.ends_at && <EndedBanner endsAt={card.ends_at} isHost={host} />}
+          {notStarted && card.starts_at ? (
+            <MarkingWindowBanner kind="upcoming" iso={card.starts_at} isHost={host} />
+          ) : ended && card.ends_at ? (
+            <MarkingWindowBanner kind="ended" iso={card.ends_at} isHost={host} />
+          ) : null}
           <CoopBoard
             card={{
               id: card.id,
@@ -78,7 +84,7 @@ export default async function GroupPlayPage({
             }}
             currentUserId={user?.id ?? null}
             isHost={host}
-            ended={ended}
+            markingClosed={(notStarted || ended) && !host}
           />
         </section>
       </div>
@@ -103,7 +109,11 @@ export default async function GroupPlayPage({
         {card.description && (
           <p className="mb-3 text-sm text-muted-foreground">{card.description}</p>
         )}
-        {ended && card.ends_at && <EndedBanner endsAt={card.ends_at} isHost={host} />}
+        {notStarted && card.starts_at ? (
+          <MarkingWindowBanner kind="upcoming" iso={card.starts_at} isHost={host} />
+        ) : ended && card.ends_at ? (
+          <MarkingWindowBanner kind="ended" iso={card.ends_at} isHost={host} />
+        ) : null}
         <BingoBoard
           card={{
             id: card.id,
@@ -115,7 +125,7 @@ export default async function GroupPlayPage({
           }}
           groupId={id}
           completions={completions}
-          markingClosed={ended && !host}
+          markingClosed={(notStarted || ended) && !host}
         />
       </section>
     </div>
