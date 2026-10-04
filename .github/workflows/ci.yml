@@ -44,10 +44,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Pinned: `latest` resolves via an unauthenticated GitHub API call, which
+      # hits the shared runner rate limit ("Failed to resolve latest ... release").
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.119.0
 
       - name: Start local Supabase (applies migrations)
         run: supabase start
