@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils"
 import { BingoBoard } from "@/components/bingo/bingo-board"
 import { CoopBoard } from "@/components/bingo/coop-board"
 import { MarkingWindowBanner } from "@/components/bingo/marking-window-banner"
+import { DownloadCardPdf } from "@/components/cards/download-card-pdf"
+import { getPrintSource } from "@/lib/queries/print"
 
 export default async function GroupPlayPage({
   params,
@@ -62,10 +64,14 @@ export default async function GroupPlayPage({
   if (card.game_mode === "coop") {
     const [user, role] = await Promise.all([getCurrentUser(), getMyRole(id)])
     const host = isHost(role)
+    const printSource = await getPrintSource(card, host).catch(() => null)
     return (
       <div className="space-y-6">
         <section>
-          <h2 className="mb-1 font-heading text-lg font-semibold">{card.title}</h2>
+          <div className="mb-1 flex items-start justify-between gap-3">
+          <h2 className="font-heading text-lg font-semibold">{card.title}</h2>
+          {printSource && <DownloadCardPdf source={printSource} />}
+        </div>
           {card.description && (
             <p className="mb-3 text-sm text-muted-foreground">{card.description}</p>
           )}
@@ -92,6 +98,7 @@ export default async function GroupPlayPage({
   }
 
   const host = isHost(await getMyRole(id))
+  const printSource = await getPrintSource(card, host).catch(() => null)
 
   // Per-challenge completion counts (best-effort — never blocks the board).
   // Load-time snapshot; live updates are a follow-up.
@@ -105,7 +112,10 @@ export default async function GroupPlayPage({
   return (
     <div className="space-y-6">
       <section>
-        <h2 className="mb-1 font-heading text-lg font-semibold">{card.title}</h2>
+        <div className="mb-1 flex items-start justify-between gap-3">
+          <h2 className="font-heading text-lg font-semibold">{card.title}</h2>
+          {printSource && <DownloadCardPdf source={printSource} />}
+        </div>
         {card.description && (
           <p className="mb-3 text-sm text-muted-foreground">{card.description}</p>
         )}

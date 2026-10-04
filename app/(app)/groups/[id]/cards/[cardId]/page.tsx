@@ -6,7 +6,9 @@ import { getLeaderboard } from "@/lib/queries/leaderboard"
 import { getCoopProgress, getCoopStandings } from "@/lib/queries/coop"
 import { getMyRole, isHost } from "@/lib/queries/membership"
 import { getCurrentUser } from "@/lib/auth/current-user"
+import { getPrintSource } from "@/lib/queries/print"
 import { CardChallengesView } from "@/components/cards/card-challenges-view"
+import { DownloadCardPdf } from "@/components/cards/download-card-pdf"
 import { Leaderboard, type LeaderboardRow } from "@/components/bingo/leaderboard"
 import { CoopStandings } from "@/components/bingo/coop-standings"
 import { LocalDateTime } from "@/components/common/local-datetime"
@@ -30,6 +32,7 @@ export default async function CardDetailPage({
 
   const host = isHost(await getMyRole(id))
   const challenges = card.challenges ?? []
+  const printSource = await getPrintSource(card, host).catch(() => null)
 
   // Standings/history: available once a card is live or archived (not drafts).
   // Same data the Leaderboard tab shows, but scoped to THIS card — so archived
@@ -84,15 +87,18 @@ export default async function CardDetailPage({
                 <Badge variant="outline">Ended</Badge>
               )}
           </div>
-          {host && card.status === "active" && (
-            <Link
-              href={`/groups/${id}/manage/cards/${card.id}`}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-            >
-              <PencilIcon />
-              Edit
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {printSource && <DownloadCardPdf source={printSource} />}
+            {host && card.status === "active" && (
+              <Link
+                href={`/groups/${id}/manage/cards/${card.id}`}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              >
+                <PencilIcon />
+                Edit
+              </Link>
+            )}
+          </div>
         </div>
         {card.description && (
           <p className="text-sm text-muted-foreground">{card.description}</p>
