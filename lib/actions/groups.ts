@@ -42,7 +42,7 @@ export async function createGroup(input: CreateGroupInput): Promise<ActionResult
     if (error) throw new ActionError('error', error.message)
     if (!data) throw new ActionError('error', 'Failed to create group.')
 
-    revalidatePath('/groups')
+    revalidatePath('/')
     return data as Group
   })
 }
@@ -75,8 +75,8 @@ export async function updateGroup(input: UpdateGroupInput): Promise<ActionResult
     if (error) throw new ActionError('error', error.message)
     if (!data) throw new ActionError('not_found', 'Group not found or not permitted.')
 
-    revalidatePath(`/groups/${groupId}`)
-    revalidatePath('/groups')
+    revalidatePath(`/groups/${groupId}`, 'layout')
+    revalidatePath('/')
     return data
   })
 }
@@ -93,7 +93,7 @@ export async function deleteGroup(input: { groupId: string }): Promise<ActionRes
     const { error } = await supabase.from('groups').delete().eq('id', parsed.data.groupId)
     if (error) throw new ActionError('error', error.message)
 
-    revalidatePath('/groups')
+    revalidatePath('/')
     return { groupId: parsed.data.groupId }
   })
 }
@@ -117,8 +117,8 @@ export async function archiveGroup(input: ArchiveGroupInput): Promise<ActionResu
     if (error) throw new ActionError('error', error.message)
     if (!data) throw new ActionError('not_found', 'Group not found or not permitted.')
 
-    revalidatePath(`/groups/${groupId}`)
-    revalidatePath('/groups')
+    revalidatePath(`/groups/${groupId}`, 'layout')
+    revalidatePath('/')
     return data
   })
 }
@@ -137,8 +137,8 @@ export async function joinGroup(input: { joinCode: string }): Promise<ActionResu
     if (!data) throw new ActionError('not_found', 'Invalid join code.')
 
     const group = data as Group
-    revalidatePath('/groups')
-    revalidatePath(`/groups/${group.id}`)
+    revalidatePath('/')
+    revalidatePath(`/groups/${group.id}`, 'layout')
     return group
   })
 }
@@ -171,8 +171,8 @@ export async function leaveGroup(input: { groupId: string }): Promise<ActionResu
     return fail('forbidden', 'The owner must transfer ownership before leaving.')
   }
 
-  revalidatePath('/groups')
-  revalidatePath(`/groups/${parsed.data.groupId}`)
+  revalidatePath('/')
+  revalidatePath(`/groups/${parsed.data.groupId}`, 'layout')
   return ok({ groupId: parsed.data.groupId })
 }
 
@@ -204,7 +204,7 @@ export async function removeMember(input: RemoveMemberInput): Promise<ActionResu
     return fail('forbidden', 'Member not found or not permitted.')
   }
 
-  revalidatePath(`/groups/${groupId}`)
+  revalidatePath(`/groups/${groupId}`, 'layout')
   return ok({ groupId, userId })
 }
 
@@ -229,7 +229,7 @@ export async function regenerateJoinCode(input: { groupId: string }): Promise<Ac
         .single()
 
       if (!error && data) {
-        revalidatePath(`/groups/${groupId}`)
+        revalidatePath(`/groups/${groupId}`, 'layout')
         return { joinCode: data.join_code }
       }
       // 23505 = unique_violation → retry with a fresh code.
@@ -269,7 +269,7 @@ export async function updateMemberRole(input: UpdateMemberRoleInput): Promise<Ac
     return fail('forbidden', 'Member not found or not permitted.')
   }
 
-  revalidatePath(`/groups/${groupId}`)
+  revalidatePath(`/groups/${groupId}`, 'layout')
   return ok({ groupId, userId, role })
 }
 
@@ -288,7 +288,7 @@ export async function transferOwnership(input: TransferOwnershipInput): Promise<
     })
     if (error) throw new ActionError('error', error.message)
 
-    revalidatePath(`/groups/${groupId}`)
+    revalidatePath(`/groups/${groupId}`, 'layout')
     return { groupId, newOwnerId }
   })
 }
@@ -329,7 +329,7 @@ export async function uploadGroupImage(formData: FormData): Promise<ActionResult
     if (error) throw new ActionError('error', error.message)
     if (!data?.image_path) throw new ActionError('not_found', 'Group not found or not permitted.')
 
-    revalidatePath(`/groups/${groupId}`)
+    revalidatePath(`/groups/${groupId}`, 'layout')
     return { imagePath: data.image_path }
   })
 }
@@ -372,8 +372,8 @@ export async function uploadGroupBackground(
     if (error) throw new ActionError('error', error.message)
     if (!data?.background_path) throw new ActionError('not_found', 'Group not found or not permitted.')
 
-    revalidatePath(`/groups/${groupId}`)
-    revalidatePath('/groups')
+    revalidatePath(`/groups/${groupId}`, 'layout')
+    revalidatePath('/')
     return { backgroundPath: data.background_path }
   })
 }
@@ -400,8 +400,8 @@ export async function removeGroupBackground(
       throw new ActionError('forbidden', 'Group not found or not permitted.')
     }
 
-    revalidatePath(`/groups/${groupId}`)
-    revalidatePath('/groups')
+    revalidatePath(`/groups/${groupId}`, 'layout')
+    revalidatePath('/')
     return { groupId }
   })
 }

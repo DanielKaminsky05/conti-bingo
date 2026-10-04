@@ -46,7 +46,7 @@ export async function createInvite(input: CreateInviteInput): Promise<ActionResu
     if (error) throw new ActionError('error', error.message)
     if (!data) throw new ActionError('error', 'Failed to create invite.')
 
-    revalidatePath(`/groups/${groupId}`)
+    revalidatePath(`/groups/${groupId}`, 'layout')
     return data
   })
 }
@@ -76,7 +76,7 @@ export async function revokeInvite(input: { inviteId: string }): Promise<ActionR
   if (error) return fail('error', error.message)
   if (!data) return fail('not_found', 'Invite not found or not permitted.')
 
-  revalidatePath(`/groups/${data.group_id}`)
+  revalidatePath(`/groups/${data.group_id}`, 'layout')
   return ok({ inviteId: parsed.data.inviteId })
 }
 
@@ -94,8 +94,8 @@ export async function acceptInvite(input: { token: string }): Promise<ActionResu
     if (!data) throw new ActionError('not_found', 'Invite is invalid, expired, or revoked.')
 
     const group = data as Group
-    revalidatePath('/groups')
-    revalidatePath(`/groups/${group.id}`)
+    revalidatePath('/')
+    revalidatePath(`/groups/${group.id}`, 'layout')
     return group
   })
 }

@@ -89,7 +89,7 @@ export async function createCard(input: unknown): Promise<ActionResult<{ cardId:
 
     const cardId = await insertDraftCard(supabase, user.id, parsed.data)
 
-    revalidatePath(`/groups/${parsed.data.groupId}`)
+    revalidatePath(`/groups/${parsed.data.groupId}`, 'layout')
     return { cardId }
   })
 }
@@ -234,7 +234,7 @@ export async function updateCard(input: unknown): Promise<ActionResult<CardRow>>
       if (rbErr) throw new ActionError('error', rbErr.message)
     }
 
-    revalidatePath(`/groups/${card.group_id}`)
+    revalidatePath(`/groups/${card.group_id}`, 'layout')
     return card
   })
 }
@@ -265,7 +265,7 @@ export async function publishCard(input: unknown): Promise<ActionResult<CardRow>
 
     const card = await activateCard(supabase, parsed.data.cardId)
 
-    revalidatePath(`/groups/${card.group_id}`)
+    revalidatePath(`/groups/${card.group_id}`, 'layout')
     return card
   })
 }
@@ -294,7 +294,7 @@ export async function archiveCard(input: unknown): Promise<ActionResult<{ cardId
       throw new ActionError('forbidden', 'Card not found or not permitted.')
     }
 
-    revalidatePath(`/groups/${data[0].group_id}`)
+    revalidatePath(`/groups/${data[0].group_id}`, 'layout')
     return { cardId: data[0].id }
   })
 }
@@ -330,7 +330,7 @@ export async function deleteCard(input: unknown): Promise<ActionResult<{ cardId:
       throw new ActionError('forbidden', 'Card not found or not permitted.')
     }
 
-    if (card?.group_id) revalidatePath(`/groups/${card.group_id}`)
+    if (card?.group_id) revalidatePath(`/groups/${card.group_id}`, 'layout')
     return { cardId: parsed.data.cardId }
   })
 }
@@ -352,7 +352,7 @@ export async function replaceActiveCard(input: unknown): Promise<ActionResult<{ 
     const cardId = await insertDraftCard(supabase, user.id, parsed.data)
     await activateCard(supabase, cardId)
 
-    revalidatePath(`/groups/${parsed.data.groupId}`)
+    revalidatePath(`/groups/${parsed.data.groupId}`, 'layout')
     return { cardId }
   })
 }

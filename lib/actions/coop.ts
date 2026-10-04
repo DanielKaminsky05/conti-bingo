@@ -55,7 +55,7 @@ export async function markCoopCell(input: unknown): Promise<ActionResult<null>> 
     const { cardId, position, marked } = parsed.data
 
     // Locked once the card's end time passes (hosts exempt — mirrors RLS).
-    await assertMarkingOpen(supabase, cardId)
+    const groupId = await assertMarkingOpen(supabase, cardId)
 
     // Resolve the board (creates it if this is the group's first interaction).
     const { data: boardId, error: boardError } = await supabase.rpc('get_or_create_coop_board', {
@@ -84,8 +84,8 @@ export async function markCoopCell(input: unknown): Promise<ActionResult<null>> 
       )
     }
 
-    // Play hub lives at the group route; the card id maps 1:1 to a group card.
-    revalidatePath(`/cards/${cardId}`)
+    // Marks feed the shared board, contributions standings and card detail.
+    if (groupId) revalidatePath(`/groups/${groupId}`, 'layout')
     return null
   })
 }

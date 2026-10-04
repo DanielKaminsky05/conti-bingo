@@ -49,7 +49,7 @@ export async function getOrCreatePlayerCard(
     // Load the card config.
     const { data: card, error: cardError } = await supabase
       .from('cards')
-      .select('grid_size, layout_mode, free_space')
+      .select('group_id, grid_size, layout_mode, free_space')
       .eq('id', cardId)
       .maybeSingle()
 
@@ -132,7 +132,8 @@ export async function getOrCreatePlayerCard(
       throw new ActionError('error', cellsError.message)
     }
 
-    revalidatePath(`/cards/${cardId}`)
+    // A new player card adds a row to the group's leaderboard/standings.
+    revalidatePath(`/groups/${card.group_id}`, 'layout')
     return { playerCardId: playerCard.id }
   })
 }
@@ -152,8 +153,7 @@ export async function markCell(input: unknown): Promise<ActionResult<null>> {
     }
     const { playerCardId, position, marked } = parsed.data
 
-    // Resolve the owning card up front — needed for the end-of-schedule gate
-    // and to revalidate the right view.
+    // Resolve the owning card up front — needed for the end-of-schedule gate.
     const { data: playerCard } = await supabase
       .from('player_cards')
       .select('card_id')
@@ -164,7 +164,7 @@ export async function markCell(input: unknown): Promise<ActionResult<null>> {
     }
 
     // Locked once the card's end time passes (hosts exempt — mirrors RLS).
-    await assertMarkingOpen(supabase, playerCard.card_id)
+    const groupId = await assertMarkingOpen(supabase, playerCard.card_id)
 
     const { data, error } = await supabase
       .from('player_card_cells')
@@ -180,7 +180,8 @@ export async function markCell(input: unknown): Promise<ActionResult<null>> {
       throw new ActionError('not_found', 'That square is not available to mark.')
     }
 
-    revalidatePath(`/cards/${playerCard.card_id}`)
+    // Marks feed the leaderboard, card standings and completion counts.
+    if (groupId) revalidatePath(`/groups/${groupId}`, 'layout')
     return null
   })
 }
