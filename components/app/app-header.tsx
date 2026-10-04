@@ -3,8 +3,9 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
-import { BellIcon, LogOutIcon, UserIcon } from "lucide-react"
+import { LogOutIcon, UserIcon } from "lucide-react"
 import { signOut } from "@/lib/actions/auth"
+import { NotificationBell } from "@/components/notifications/notification-bell"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { buttonVariants } from "@/components/ui/button"
 import {
@@ -20,7 +21,13 @@ import { publicStorageUrl } from "@/lib/storage-url"
 import { cn } from "@/lib/utils"
 import type { Tables } from "@/lib/supabase/database.types"
 
-export function AppHeader({ profile }: { profile: Tables<"profiles"> }) {
+export function AppHeader({
+  profile,
+  unreadNotifications,
+}: {
+  profile: Tables<"profiles">
+  unreadNotifications: number
+}) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const avatar = publicStorageUrl("avatars", profile.avatar_path)
@@ -41,13 +48,7 @@ export function AppHeader({ profile }: { profile: Tables<"profiles"> }) {
           <span className="font-heading font-semibold">Contibingo</span>
         </Link>
         <div className="flex items-center gap-1">
-          <Link
-            href="/notifications"
-            aria-label="Notifications"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
-          >
-            <BellIcon />
-          </Link>
+          <NotificationBell userId={profile.id} initialUnread={unreadNotifications} />
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full")}

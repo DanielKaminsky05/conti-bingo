@@ -322,6 +322,5 @@ shimmer. Keep it subtle; everything degrades gracefully with reduced motion.
   routes + a bottom-nav on mobile).
 - **Play surface**: is the grid the group hub itself (assumed) or a dedicated `/play`?
 - **Invite delivery**: send real invite emails now (needs SMTP) or share links only for v1?
-- **Notifications breadth**: 4 of 6 notification types aren't produced by the backend yet
-  (`invite_received`, `card_published`, `card_replaced`, `out_bingoed`) — wire those triggers
-  before building the center?
+- ~~**Notifications breadth**~~ — resolved: all six types are produced by triggers
+  (migration 21); the header bell shows a live unread badge.

@@ -19,8 +19,11 @@ export function subscribeToNotifications(
   userId: string,
   onChange: (payload: RealtimePostgresChangesPayload<Tables<'notifications'>>) => void
 ): RealtimeChannel {
+  // Unique channel name per subscriber: the header bell and the notification
+  // center both subscribe, and Supabase reuses channels by name (a shared name
+  // makes the 2nd `.on(...).subscribe()` throw "cannot add callbacks after subscribe()").
   return client
-    .channel(`notifications:${userId}`)
+    .channel(`notifications:${userId}:${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       {

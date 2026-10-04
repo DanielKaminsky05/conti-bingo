@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState, useTransition } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { BellIcon } from "lucide-react"
@@ -44,11 +45,18 @@ function describe(n: Notification): { title: string; body?: string } {
         title: group ? `You were invited to ${group}` : "You received an invite",
         body: actor ? `Invited by ${actor}.` : undefined,
       }
-    case "card_published":
+    case "card_published": {
+      const startsAt = payloadValue(p, "starts_at")
+      const upcoming = startsAt ? new Date(startsAt).getTime() > Date.now() : false
       return {
         title: card ? `New card: ${card}` : "A new bingo card is live",
-        body: group ? `A game just started${inGroup}.` : "A game just started.",
+        body: upcoming
+          ? `Marking opens ${new Date(startsAt!).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}.`
+          : group
+            ? `A game just started${inGroup}.`
+            : "A game just started.",
       }
+    }
     case "card_replaced":
       return {
         title: card ? `Card replaced with ${card}` : "The active card was replaced",
@@ -61,11 +69,29 @@ function describe(n: Notification): { title: string; body?: string } {
       }
     case "out_bingoed":
       return {
-        title: `${actor ?? "Someone"} out-bingoed you${inGroup}`,
-        body: "Time for a comeback.",
+        title: `${actor ?? "Someone"} took first place${inGroup}`,
+        body: card ? `You've been out-bingoed on ${card}. Time for a comeback.` : "Time for a comeback.",
       }
     default:
       return { title: "New activity" }
+  }
+}
+
+/** Where tapping a notification takes you (null = not linkable). */
+function hrefFor(n: Notification): string | null {
+  if (n.type === "invite_received") {
+    const token = payloadValue(n.payload, "token")
+    return token ? `/invite/${token}` : null
+  }
+  if (!n.group_id) return null
+  switch (n.type) {
+    case "member_joined":
+      return `/groups/${n.group_id}/members`
+    case "bingo_achieved":
+    case "out_bingoed":
+      return `/groups/${n.group_id}/leaderboard`
+    default:
+      return `/groups/${n.group_id}`
   }
 }
 
@@ -177,11 +203,13 @@ export function NotificationList({
         {items.map((n) => {
           const { title, body } = describe(n)
           const unread = !n.read_at
+          const href = hrefFor(n)
           return (
             <li key={n.id}>
               <div
                 className={cn(
-                  "flex items-start gap-3 rounded-xl border p-3 ring-1 ring-transparent transition-colors",
+                  "relative flex items-start gap-3 rounded-xl border p-3 ring-1 ring-transparent transition-colors",
+                  href && "hover:bg-muted/50",
                   unread ? "border-primary/30 bg-primary/5" : "border-border bg-card"
                 )}
               >
@@ -193,7 +221,19 @@ export function NotificationList({
                   aria-hidden
                 />
                 <div className="min-w-0 flex-1 space-y-0.5">
-                  <p className="text-sm leading-snug font-medium">{title}</p>
+                  <p className="text-sm leading-snug font-medium">
+                    {href ? (
+                      <Link
+                        href={href}
+                        onClick={() => unread && markOne(n.id)}
+                        className="after:absolute after:inset-0 hover:underline"
+                      >
+                        {title}
+                      </Link>
+                    ) : (
+                      title
+                    )}
+                  </p>
                   {body && <p className="text-sm text-muted-foreground">{body}</p>}
                   <p className="text-xs text-muted-foreground">{relativeTime(n.created_at)}</p>
                 </div>
@@ -201,6 +241,7 @@ export function NotificationList({
                   <Button
                     variant="ghost"
                     size="xs"
+                    className="relative z-10"
                     onClick={() => markOne(n.id)}
                     disabled={pending}
                   >

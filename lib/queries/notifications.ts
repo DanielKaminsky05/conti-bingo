@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/auth/current-user'
 import { ActionError } from '@/lib/actions/result'
 import { listNotificationsSchema, type ListNotificationsInput } from '@/lib/validation/notifications'
 import type { Tables } from '@/lib/supabase/database.types'
@@ -39,4 +40,23 @@ export async function listNotifications(
   }
 
   return data ?? []
+}
+
+/**
+ * Unread count for the header bell's initial render (the bell keeps it live via
+ * Realtime afterwards). Returns 0 when signed out rather than throwing — the
+ * shell renders for every authed page and shouldn't fail on a badge.
+ */
+export async function countUnreadNotifications(): Promise<number> {
+  const user = await getCurrentUser()
+  if (!user) return 0
+
+  const supabase = await createClient()
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .is('read_at', null)
+  if (error) return 0
+  return count ?? 0
 }

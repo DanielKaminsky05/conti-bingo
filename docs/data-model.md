@@ -20,8 +20,13 @@
 > - **Membership RPCs** (`create_group`, `join_group`, `accept_invite`, `get_invite_preview`)
 >   are SECURITY DEFINER functions that enforce role rules server-side; `group_members` has
 >   **no direct client INSERT** path (prevents role-escalation).
-> - **Notification triggers** implemented for `member_joined` and `bingo_achieved`; the
->   remaining notification types are wired in the app layer later.
+> - **Notification triggers** implemented for all six types (migration 21): `member_joined`
+>   (hosts), `bingo_achieved` (a player's *first* bingo per card → the group; retracted when
+>   their last bingo is revoked), `out_bingoed` (the leader, when someone goes strictly
+>   ahead in bingo count; retracted with that bingo), `card_published` / `card_replaced`
+>   (card becomes active → group, minus the publisher), `invite_received` (email invite to an
+>   existing account; removed on revoke/expiry, read on accept). Payloads carry
+>   `actor_name` / `group_name` / `card_title` for rendering.
 > - Join code is currently 6 uppercase hex chars (from `gen_random_uuid`); can be refined.
 
 > Authentication (email + password, with **email confirmation** on sign-up; no 2FA) is
