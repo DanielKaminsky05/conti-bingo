@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  # Blocking: typecheck + unit tests (no database needed).
+  # Blocking: typecheck + unit tests + production build (no database needed).
   build-and-unit:
     runs-on: ubuntu-latest
     steps:
@@ -26,6 +26,9 @@ jobs:
 
       - name: Unit tests
         run: npm run test:unit
+
+      - name: Build
+        run: npm run build
 
   # Integration tests against an ephemeral local Supabase (migrations applied
   # by `supabase start`). No live project is involved.
