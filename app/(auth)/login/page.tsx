@@ -6,9 +6,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { AuthNotice } from "@/components/common/auth-notice"
 import { LoginForm } from "./login-form"
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string }>
+}) {
+  const { notice } = await searchParams
   return (
     <Card>
       <CardHeader>
@@ -16,6 +22,7 @@ export default function LoginPage() {
         <CardDescription>Sign in to keep playing.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <AuthNotice notice={notice} />
         <LoginForm />
         <p className="text-center text-sm text-muted-foreground">
           No account?{" "}

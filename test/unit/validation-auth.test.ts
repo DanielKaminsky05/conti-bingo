@@ -5,6 +5,8 @@ import {
   resendSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  confirmTokenSchema,
+  safeNextPath,
 } from '@/lib/validation/auth'
 
 /**
@@ -186,5 +188,42 @@ describe('resetPasswordSchema', () => {
   it('rejects a missing confirm field', () => {
     const res = resetPasswordSchema.safeParse({ password: validPassword })
     expect(res.success).toBe(false)
+  })
+})
+
+describe('safeNextPath', () => {
+  it('keeps same-origin paths', () => {
+    expect(safeNextPath('/reset-password')).toBe('/reset-password')
+    expect(safeNextPath('/groups/abc?tab=1')).toBe('/groups/abc?tab=1')
+  })
+
+  it('falls back to "/" for anything that could leave the site', () => {
+    for (const bad of ['https://evil.com', '//evil.com', '/\\evil.com', 'evil.com', '', null, undefined]) {
+      expect(safeNextPath(bad)).toBe('/')
+    }
+  })
+})
+
+describe('confirmTokenSchema (email-link /auth/confirm)', () => {
+  it('accepts every Supabase email-link type', () => {
+    for (const type of ['signup', 'email', 'recovery', 'email_change', 'invite', 'magiclink']) {
+      expect(confirmTokenSchema.safeParse({ tokenHash: 'abc123', type }).success).toBe(true)
+    }
+  })
+
+  it('rejects a missing token or unknown type', () => {
+    expect(confirmTokenSchema.safeParse({ tokenHash: '', type: 'email' }).success).toBe(false)
+    expect(confirmTokenSchema.safeParse({ tokenHash: '   ', type: 'email' }).success).toBe(false)
+    expect(confirmTokenSchema.safeParse({ tokenHash: 'abc', type: 'sms' }).success).toBe(false)
+    expect(confirmTokenSchema.safeParse({ tokenHash: 'abc' }).success).toBe(false)
+  })
+
+  it('normalizes next to a safe path', () => {
+    const parse = (next?: string) =>
+      confirmTokenSchema.parse({ tokenHash: 'abc', type: 'recovery', next }).next
+    expect(parse('/reset-password')).toBe('/reset-password')
+    expect(parse(undefined)).toBe('/')
+    expect(parse('https://evil.com/phish')).toBe('/')
+    expect(parse('//evil.com')).toBe('/')
   })
 })

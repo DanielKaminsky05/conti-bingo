@@ -6,9 +6,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { AuthNotice } from "@/components/common/auth-notice"
 import { ForgotPasswordForm } from "./forgot-password-form"
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string }>
+}) {
+  const { notice } = await searchParams
   return (
     <Card>
       <CardHeader>
@@ -18,6 +24,7 @@ export default function ForgotPasswordPage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <AuthNotice notice={notice} />
         <ForgotPasswordForm />
         <p className="text-center text-sm text-muted-foreground">
           Remembered it?{" "}

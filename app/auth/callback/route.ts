@@ -2,9 +2,20 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 /**
- * A6 — Handle the email-confirmation link: exchange the `code` for a session,
- * then redirect. The redirect target (`next` / `redirect_to`) is same-origin
- * guarded to prevent open redirects.
+ * A6 — Handle a PKCE email link (`{{ .ConfirmationURL }}` → Supabase /verify →
+ * here with `?code=`): exchange the code for a session, then redirect. The
+ * redirect target (`next` / `redirect_to`) is same-origin guarded to prevent
+ * open redirects.
+ *
+ * Failures never dead-end on a plain-text page — they go somewhere useful:
+ *  - no `code`: Supabase already rejected the link (its error sits in the URL
+ *    #fragment, which never reaches the server). Almost always the token was
+ *    used already — by an earlier click, or by a mail scanner (Microsoft Safe
+ *    Links) that opened the link first, which also CONFIRMS the account.
+ *  - exchange fails: the link was verified (so the email IS confirmed) but this
+ *    browser lacks the PKCE verifier — e.g. signed up on a laptop, opened the
+ *    email on a phone.
+ * New emails link to /auth/confirm instead (scanner-safe, any browser).
  */
 export async function GET(request: NextRequest): Promise<Response> {
   const { searchParams, origin } = request.nextUrl
@@ -25,17 +36,17 @@ export async function GET(request: NextRequest): Promise<Response> {
     return new NextResponse('Invalid redirect target.', { status: 400 })
   }
 
-  if (!code) {
-    return new NextResponse('Missing confirmation code.', { status: 400 })
-  }
+  const isRecovery = destination.startsWith('/reset-password')
+  const fallback = (notice: string) =>
+    NextResponse.redirect(
+      new URL(isRecovery ? '/forgot-password?notice=link-expired' : `/login?notice=${notice}`, origin)
+    )
+
+  if (!code) return fallback('link-used')
 
   const supabase = await createClient()
   const { error } = await supabase.auth.exchangeCodeForSession(code)
-  if (error) {
-    return new NextResponse('Could not confirm your email. The link may have expired.', {
-      status: 400,
-    })
-  }
+  if (error) return fallback('confirmed')
 
   return NextResponse.redirect(new URL(destination, origin))
 }

@@ -18,7 +18,7 @@
             </tr>
             <tr>
               <td style="padding:24px 32px; text-align:center;">
-                <a href="{{ .ConfirmationURL }}"
+                <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email_change"
                    style="display:inline-block; background-color:#6aaa64; color:#ffffff; font-size:16px; font-weight:600; text-decoration:none; padding:14px 28px; border-radius:12px;">
                   Confirm new email
                 </a>
@@ -30,7 +30,7 @@
                   Button not working? Paste this link into your browser:
                 </p>
                 <p style="margin:0; font-size:12px; word-break:break-all;">
-                  <a href="{{ .ConfirmationURL }}" style="color:#6aaa64;">{{ .ConfirmationURL }}</a>
+                  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email_change" style="color:#6aaa64;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email_change</a>
                 </p>
               </td>
             </tr>

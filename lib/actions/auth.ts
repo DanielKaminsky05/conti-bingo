@@ -11,6 +11,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   changeEmailSchema,
+  confirmTokenSchema,
 } from '@/lib/validation/auth'
 
 /**
@@ -206,4 +207,34 @@ export async function updateEmail(input: unknown): Promise<ActionResult<null>> {
 
     return null
   })
+}
+
+/**
+ * Redeem an email link's one-time token (`/auth/confirm?token_hash=…&type=…`).
+ * Called from the "Confirm" button — never on page load — so mail scanners
+ * that open links (Microsoft Safe Links on Ivey/UWO addresses) can't burn the
+ * token before the person clicks. `verifyOtp` with a token hash works in any
+ * browser (unlike the PKCE code exchange) and starts a session on success.
+ * Returns the same-origin path to continue to.
+ */
+export async function confirmEmailToken(
+  input: unknown
+): Promise<ActionResult<{ next: string }>> {
+  const parsed = confirmTokenSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail('validation', parsed.error.issues[0]?.message ?? 'This link is invalid.')
+  }
+  const { tokenHash, type, next } = parsed.data
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
+  if (error) {
+    return fail(
+      'validation',
+      type === 'recovery'
+        ? 'This reset link has expired or was already used. Request a new one.'
+        : 'This link has expired or was already used. If you already confirmed your email, just sign in.'
+    )
+  }
+  return ok({ next })
 }
